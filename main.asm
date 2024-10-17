@@ -12,7 +12,9 @@ PULAR_LINHA MACRO
 ENDM
 .DATA
     BOARD DW 20 DUP(10 DUP('~'))
-    BOARDSPACE DW 5 DUP(32) 
+    BOARDSPACE DW 5 DUP(32)
+    ROWS DW 400
+    X DW ?
 .CODE
 UPDATESCREEN PROC
     XOR BX,BX       ; contador das linhas
@@ -24,12 +26,12 @@ UPDATESCREEN PROC
             PULAR_LINHA
         CONTINUAR:
             ROL BX,1
-            MOV AH,2h      ; imprimir caractere
+            MOV AH,2h       ; imprimir caractere
             XOR DI,DI       ; contador das colunas
 
         ; imprime uma linha dos tabuleiros
         LPLAYER:
-            MOV CX,BOARD[BX][DI]
+            MOV CX,BOARD[BX + DI]
             MOV DL,CL
             INT 21h
             INC DI
@@ -42,7 +44,7 @@ UPDATESCREEN PROC
             INT 21h
         
         ADD BX,DI
-        CMP BX,
+        CMP BX,ROWS
         JNZ PULALINHA
 
         RET

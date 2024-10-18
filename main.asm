@@ -1,52 +1,50 @@
 .MODEL SMALL 
+.STACK 100h
 PULAR_LINHA MACRO
     PUSH AX
     PUSH DX
-    MOV AH,2h
-    MOV DL,10
-    INT 21h
-    MOV DL,13
-    INT 21h
+        MOV AH,2h
+        MOV DL,10
+        INT 21h
+
+        MOV DL,13
+        INT 21h
     POP DX
     POP AX
 ENDM
 .DATA
-    BOARD DW 20 DUP(10 DUP('~'))
-    BOARDSPACE DW 5 DUP(32)
+    BOARD DW 10 DUP('~')
+    BOARDSPACE DB 5 DUP('1')
     ROWS DW 400
     X DW ?
+    randomNum DB ?          ; variável para o número aletório
 .CODE
+; gera um número aleatório entre 0 e 9
+RANDOMNUMBER PROC
+    MOV AH,0
+    INT 1ah
+
+    MOV AX,DX
+    XOR DX,DX
+    MOV BX,10
+    DIV BX
+    
+    MOV randomNum,DL
+    INT 21h
+    RET
+RANDOMNUMBER ENDP
+DELAY PROC
+    MOV CX,1
+STARTDELAY:
+    CMP CX,100
+    JE ENDDELAY
+    INC CX
+    JMP STARTDELAY
+ENDDELAY:
+    RET
+DELAY ENDP
 UPDATESCREEN PROC
-    XOR BX,BX       ; contador das linhas
-
-    ; imprime o tabuleiro
-    PULALINHA:
-        ROR BX,1
-        JC CONTINUAR
-            PULAR_LINHA
-        CONTINUAR:
-            ROL BX,1
-            MOV AH,2h       ; imprimir caractere
-            XOR DI,DI       ; contador das colunas
-
-        ; imprime uma linha dos tabuleiros
-        LPLAYER:
-            MOV CX,BOARD[BX + DI]
-            MOV DL,CL
-            INT 21h
-            INC DI
-            CMP DI,20
-            JNZ LPLAYER
-
-            ; espaço entre os tabuleiros
-            MOV AH,9h
-            LEA DX,BOARDSPACE   
-            INT 21h
-        
-        ADD BX,DI
-        CMP BX,ROWS
-        JNZ PULALINHA
-
+    
         RET
 UPDATESCREEN ENDP
 
@@ -54,6 +52,16 @@ MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
 
-    CALL UPDATESCREEN
+    CALL RANDOMNUMBER
+
+    MOV AH,2h
+    MOV DL,randomNum
+    OR DL,30h
+    INT 21h
+
+    ; CALL UPDATESCREEN
+
+    MOV AH,4ch
+    INT 21h
 MAIN ENDP
 END MAIN

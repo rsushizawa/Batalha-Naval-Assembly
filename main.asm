@@ -1,4 +1,5 @@
 .MODEL SMALL 
+.STACK 100h
 PULAR_LINHA MACRO
     PUSH AX
     PUSH DX
@@ -11,43 +12,45 @@ PULAR_LINHA MACRO
     POP AX
 ENDM
 .DATA
-    BOARD DW 20 DUP(10 DUP('~'))
-    BOARDSPACE DW 5 DUP(32)
-    ROWS DW 400
-    X DW ?
+    MAPA1 DW 20 DUP( 10 DUP('~'))
+    BOARDSPACE DB 32,32,32,32,32,32,32,'$'
 .CODE
 UPDATESCREEN PROC
-    XOR BX,BX       ; contador das linhas
+    
+    XOR BX,BX
+    XOR SI,SI
+    MOV CX,20
 
-    ; imprime o tabuleiro
-    PULALINHA:
-        ROR BX,1
-        JC CONTINUAR
-            PULAR_LINHA
-        CONTINUAR:
-            ROL BX,1
-            MOV AH,2h       ; imprimir caractere
-            XOR DI,DI       ; contador das colunas
+    MOV AH,9h
+    LEA DX,BOARDSPACE
+    INT 21h
 
-        ; imprime uma linha dos tabuleiros
-        LPLAYER:
-            MOV CX,BOARD[BX + DI]
-            MOV DL,CL
-            INT 21h
-            INC DI
-            CMP DI,20
-            JNZ LPLAYER
+    MOV AH,2h
+IMPRIMIR:
+    MOV DX,MAPA1[BX][SI]
+    INT 21h
 
-            ; espaço entre os tabuleiros
-            MOV AH,9h
-            LEA DX,BOARDSPACE   
-            INT 21h
-        
-        ADD BX,DI
-        CMP BX,ROWS
-        JNZ PULALINHA
+    INC SI
+    CMP SI,20
+    JNZ IMPRIMIR
 
-        RET
+    ADD BX,SI
+    XOR SI,SI
+
+    TEST CX,1
+    JZ PLAYER
+
+    PULAR_LINHA
+
+PLAYER:
+    MOV AH,9h
+    LEA DX,BOARDSPACE
+    INT 21h
+
+    MOV AH,2h
+    LOOP IMPRIMIR
+
+    RET
 UPDATESCREEN ENDP
 
 MAIN PROC
@@ -55,5 +58,8 @@ MAIN PROC
     MOV DS,AX
 
     CALL UPDATESCREEN
+
+    MOV AH,4ch
+    INT 21h
 MAIN ENDP
 END MAIN

@@ -3,11 +3,12 @@
 PULAR_LINHA MACRO
     PUSH AX
     PUSH DX
-    MOV AH,2h
-    MOV DL,10
-    INT 21h
-    MOV DL,13
-    INT 21h
+        MOV AH,2h
+        MOV DL,10
+        INT 21h
+
+        MOV DL,13
+        INT 21h
     POP DX
     POP AX
 ENDM
@@ -17,7 +18,10 @@ ENDM
     CPUSECRET DW 10 DUP( 10 DUP('~'))
     SCREEN DW 20 DUP( 10 DUP('~'))
     BOARDSPACE DB 32,32,32,32,32,32,32,'$'
+    randomNum DB ?          ; variável para o número aletório
+
 .CODE
+
 UPDATESCREEN PROC
     
     XOR BX,BX
@@ -64,9 +68,42 @@ PULALINHA:
     RET
 UPDATESCREEN ENDP
 
+; gera um número aleatório entre 0 e 9
+RANDOMNUMBER PROC
+    MOV AH,0
+    INT 1ah
+
+    MOV AX,DX
+    XOR DX,DX
+    MOV BX,10
+    DIV BX
+    
+    MOV randomNum,DL
+    INT 21h
+    RET
+RANDOMNUMBER ENDP
+
+DELAY PROC
+    MOV CX,1
+STARTDELAY:
+    CMP CX,100
+    JE ENDDELAY
+    INC CX
+    JMP STARTDELAY
+ENDDELAY:
+    RET
+DELAY ENDP
+
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
+    
+    CALL RANDOMNUMBER
+
+    MOV AH,2h
+    MOV DL,randomNum
+    OR DL,30h
+    INT 21h
 
     CALL UPDATESCREEN
 

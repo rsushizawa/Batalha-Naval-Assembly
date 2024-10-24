@@ -1,7 +1,7 @@
 .MODEL SMALL 
 .STACK 100h
 ; macro de pulara 1 linha
-PULAR_LINHA MACRO
+pulaLinha MACRO
     PUSH AX
     PUSH DX
         MOV AH,2h
@@ -22,7 +22,7 @@ ENDM
 
 .CODE
 ; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
-UPDATESCREEN PROC
+updateScreen PROC
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
@@ -30,60 +30,62 @@ UPDATESCREEN PROC
     XOR CX,CX       ; contador auxiliar para as linhas
     XOR DI,DI       ; contador auxiliar pular linhas
 
-REPEAT:
-; START_SWICH_CASE
-    ; verifica se está no começo da linha
-    TEST DI,1       
-    JZ PLAYER
-    ; se não estiver então imprime a CPUBOARD
-    LEA DX,CPUBOARD
-    JMP CONTINUE
-
-PLAYER:
-    ; se estiver no começo da linha então imrprime a PLEYERBOARD
-    LEA DX,PLAYERBOARD
-; END_SWICH_CASE
-
-; imprimir a linha do tabuleiro selecionado em DX
 ; START_REPEAT
-CONTINUE:
-    XOR SI,SI
-    MOV AH,2h
-    ADD DX,CX
-    MOV BX,DX
-IMPRIME:
-    MOV DL,[BX][SI]
-    INT 21h
+    REPEAT:
+    ; START_SWICH_CASE
+        ; verifica se está no começo da linha
+        TEST DI,1       
+        JZ PLAYER
+        ; se não estiver então imprime a CPUBOARD
+        LEA DX,CPUBOARD
+        JMP CONTINUE
 
-    INC SI
-    CMP SI,20
-    JNZ IMPRIME
-; END_REPEAT
-; imprime 7 caracteres de espaço
-SPACE:
-    MOV AH,09h
-    LEA DX,BOARDSPACE
-    INT 21h
+        PLAYER:
+        ; se estiver no começo da linha então imrprime a PLEYERBOARD
+        LEA DX,PLAYERBOARD
+    ; END_SWICH_CASE
 
-; START_IF
-    INC DI
-; IF DI IS ODD
-    TEST DI,1
-; THEN
-    JNZ REPEAT
-; ELSE
-PULALINHA:
-    PULAR_LINHA
-    ADD CX,SI
+    ; imprimir a linha do tabuleiro selecionado em DX
+    ; START_REPEAT
+        CONTINUE:
+            XOR SI,SI
+            MOV AH,2h
+            ADD DX,CX
+            MOV BX,DX
+        IMPRIME:
+            MOV DL,[BX][SI]
+            INT 21h
+
+            INC SI
+            CMP SI,20
+            JNZ IMPRIME
+    ; END_REPEAT
+    ; imprime 7 caracteres de espaço
+    SPACE:
+        MOV AH,09h
+        LEA DX,BOARDSPACE
+        INT 21h
+
+    ; START_IF
+            INC DI
+        ; IF DI IS ODD
+            TEST DI,1
+        ; THEN
+            JNZ REPEAT
+        ; ELSE
+            pulaLinha
+            ADD CX,SI
+    ; END_IF
+
 ; END_REPEAT_CONDITION
     CMP CX,0C8h
     JNZ REPEAT
 
     RET
-UPDATESCREEN ENDP
+updateScreen ENDP
 
 ; gera um número aleatório entre 0 e 9
-RANDOMNUMBER PROC
+randomNumber PROC
     ; entrada: void
     ; saida: randomNum
     MOV AH,0
@@ -98,22 +100,54 @@ RANDOMNUMBER PROC
     INT 21h
 
     RET
-RANDOMNUMBER ENDP
+randomNumber ENDP
 
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
-    
-    CALL RANDOMNUMBER
+
+; test code
+    CALL randomNumber
 
     MOV AH,2h
     MOV DL,randomNum
     OR DL,30h
     INT 21h
 
-    PULAR_LINHA
+    pulaLinha
 
-    CALL UPDATESCREEN
+    CALL updateScreen
+; end test code
+; code_overview
+
+    ; gerarMapas
+
+    ; REPEAT
+    ;     updateScreen
+        
+    ;     REPEAT
+    ;         selecionaAlvo
+
+    ;         verificaAcerto
+
+    ;         updateMatrix
+
+    ;         updateScreen
+    ;     UNTIL TIRO = ERRO
+
+    ;     REPEAT
+    ;         selecionaAlvoAleatorio
+
+    ;         verificaAcerto
+
+    ;         updateMatrix
+
+    ;         updateScreen
+    ;     UNTIL TIRO = ERRO
+    ; UNTIL ALL BOATS OF ONE OF THE PLAYER HAVE SINKEN
+
+    ; endScreen
+;  end code_overview
 
     MOV AH,4ch
     INT 21h

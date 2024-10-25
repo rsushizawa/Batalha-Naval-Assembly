@@ -14,15 +14,37 @@ pulaLinha MACRO
     POP AX
 ENDM
 .DATA
-    PLAYERBOARD DW 10 DUP( 10 DUP('~'))         ; tabuleiro do jogador
-    CPUBOARD DW 10 DUP( 10 DUP('1'))            ; tabuleiro da CPU que é exibido na tela
-    CPUSECRET DW 10 DUP( 10 DUP('~'))           ; tabuleiro da CPU
-    BOARDSPACE DB 32,32,32,32,32,32,32,'$'      ; string de spaços para o UPDATESCREEN
-    randomNum DB ?                              ; variável para o número aletório
+    playerBoard DW 5 DUP( 10 DUP('~')),5 DUP( 10 DUP('A'))          ; tabuleiro do jogador
+    cpuBoard DW 5 DUP( 10 DUP('~')),5 DUP( 10 DUP('A'))             ; tabuleiro da CPU que é exibido na tela
+    cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
+    boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o UPDATESCREEN
+    randomNum DB ?                                                  ; variável para o número aletório
+    playerMap DW ?                                                  ; endereço de memória do mapa selecionado para o player
+    cpuMap DW ?                                                     ; endereço de memória do mapa selecionado para a CPU
+
+    map1 DW '~','~','~','~','~','~','~','~','~','~'
+         DW '~','A','A','A','A','~','~','~','~','A'
+         DW '~','~','~','~','~','~','~','~','~','A'
+         DW '~','~','~','~','~','~','A','~','~','A'
+         DW '~','~','~','~','~','~','A','~','~','~'
+         DW '~','~','A','A','~','~','~','~','A','~'
+         DW '~','~','~','~','~','A','~','A','A','A'
+         DW '~','~','~','~','A','A','~','~','~','~'
+         DW '~','~','~','~','~','A','~','~','~','~'
+    
+    map2 DW 0,0,0,0,0,0,0,0,0,0
+         DW 0,1,0,1,0,0,0,1,0,0
+         DW 0,1,0,1,0,0,1,1,0,0
+         DW 0,1,0,0,0,0,0,1,0,0
+         DW 0,1,0,0,0,0,0,0,0,0
+         DW 0,0,0,0,0,0,0,0,0,0
+         DW 0,0,0,1,0,0,0,0,1,1
+         DW 0,0,1,1,1,0,0,0,0,0
+         DW 0,0,0,0,0,0,1,1,1,0
 
 .CODE
-; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
-updateScreen PROC
+; reloads the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
+reloadScreen PROC
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
@@ -37,12 +59,12 @@ updateScreen PROC
         TEST DI,1       
         JZ PLAYER
         ; se não estiver então imprime a CPUBOARD
-        LEA DX,CPUBOARD
+        LEA DX,cpuBoard
         JMP CONTINUE
 
         PLAYER:
         ; se estiver no começo da linha então imrprime a PLEYERBOARD
-        LEA DX,PLAYERBOARD
+        LEA DX,playerBoard
     ; END_SWICH_CASE
 
     ; imprimir a linha do tabuleiro selecionado em DX
@@ -61,11 +83,9 @@ updateScreen PROC
             JNZ IMPRIME
     ; END_REPEAT
     ; imprime 7 caracteres de espaço
-    SPACE:
         MOV AH,09h
-        LEA DX,BOARDSPACE
+        LEA DX,boardSpace
         INT 21h
-
     ; START_IF
             INC DI
         ; IF DI IS ODD
@@ -82,7 +102,7 @@ updateScreen PROC
     JNZ REPEAT
 
     RET
-updateScreen ENDP
+reloadScreen ENDP
 
 ; gera um número aleatório entre 0 e 9
 randomNumber PROC
@@ -102,6 +122,42 @@ randomNumber PROC
     RET
 randomNumber ENDP
 
+generateMaps PROC
+    ; seleciona dois mapas aleatórios diferentes
+    ; entrada: randomNum, cpuMap, playerMap
+    ; saida: playerBoard,cpuBoard
+
+    LEA DX,[map1]
+    MOV cpuMap,DX
+
+    CALL copyCPUMap
+
+    RET
+generateMaps ENDP
+
+copyCPUMap PROC
+    ; copia um mapa selecionado para o tabuleiro da CPU
+    ; endtrada: cpuMap
+    ; saida: cpuBoard
+
+    XOR BX,BX
+    XOR DI,DI
+    XOR DX,DX
+    MOV CX,20
+
+    COPIAR:
+        MOV DX,cpuMap[BX][DI]
+        MOV cpuBoard[BX][DI],DX
+        ADD DI,2
+        CMP DI,20
+        JNZ COPIAR
+
+        ADD BX,DI
+        XOR DI,DI
+        LOOP COPIAR
+
+    RET
+copyCPUMap ENDP
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
@@ -116,11 +172,13 @@ MAIN PROC
 
     pulaLinha
 
-    CALL updateScreen
+    CALL copyCPUMap
+
+    CALL reloadScreen
 ; end test code
 ; code_overview
 
-    ; gerarMapas
+    ; generateMaps
 
     ; REPEAT
     ;     updateScreen

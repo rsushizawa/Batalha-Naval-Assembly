@@ -14,6 +14,7 @@ pulaLinha MACRO
     POP AX
 ENDM
 .DATA
+
     playerBoard DW 10 DUP( 9 DUP('~'),'1')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 9 DUP('~'),'1')                             ; tabuleiro da CPU que é exibido na tela
     cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU

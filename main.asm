@@ -14,7 +14,6 @@ pulaLinha MACRO
     POP AX
 ENDM
 .DATA
-
     playerBoard DW 10 DUP( 9 DUP('~'),'1')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 9 DUP('~'),'1')                             ; tabuleiro da CPU que é exibido na tela
     cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
@@ -137,8 +136,8 @@ ENDM
          DW '~','~','~','~','~','~','~','~','~','~'
     
 .CODE
-; reloads the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
-reloadScreen PROC
+; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
+updateScreen PROC
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
@@ -153,12 +152,12 @@ reloadScreen PROC
         TEST DI,1       
         JZ PLAYER
         ; se não estiver então imprime a CPUBOARD
-        LEA DX,cpuBoard
+        LEA DX,CPUBOARD
         JMP CONTINUE
 
         PLAYER:
         ; se estiver no começo da linha então imrprime a PLEYERBOARD
-        LEA DX,playerBoard
+        LEA DX,PLAYERBOARD
     ; END_SWICH_CASE
 
     ; imprimir a linha do tabuleiro selecionado em DX
@@ -177,9 +176,11 @@ reloadScreen PROC
             JNZ IMPRIME
     ; END_REPEAT
     ; imprime 7 caracteres de espaço
+    SPACE:
         MOV AH,09h
-        LEA DX,boardSpace
+        LEA DX,BOARDSPACE
         INT 21h
+
     ; START_IF
             INC DI
         ; IF DI IS ODD
@@ -196,7 +197,7 @@ reloadScreen PROC
     JNZ REPEAT
 
     RET
-reloadScreen ENDP
+updateScreen ENDP
 
 ; gera um número aleatório entre 0 e 9
 randomNumber PROC
@@ -370,7 +371,6 @@ MAIN PROC
     MOV DS,AX
 
 ; test code
-
     CALL addMapsToArray
     CALL generateMaps
     pulaLinha
@@ -379,7 +379,7 @@ MAIN PROC
 ; end test code
 ; code_overview
 
-    ; generateMaps
+    ; gerarMapas
 
     ; REPEAT
     ;     updateScreen

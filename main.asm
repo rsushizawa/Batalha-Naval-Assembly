@@ -14,13 +14,14 @@ pulaLinha MACRO
     POP AX
 ENDM
 .DATA
-    playerBoard DW 5 DUP( 10 DUP('~')),5 DUP( 10 DUP('A'))          ; tabuleiro do jogador
-    cpuBoard DW 5 DUP( 10 DUP('~')),5 DUP( 10 DUP('A'))             ; tabuleiro da CPU que é exibido na tela
+    playerBoard DW 10 DUP( 9 DUP('~'),'1')                             ; tabuleiro do jogador
+    cpuBoard DW 10 DUP( 9 DUP('~'),'1')                                ; tabuleiro da CPU que é exibido na tela
     cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
     boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o reloadScreen
     randomNum DB ?                                                  ; variável para o número aletório
     playerMap DW ?                                                  ; endereço de memória do mapa selecionado para o player
     cpuMap DW ?                                                     ; endereço de memória do mapa selecionado para a CPU
+    
 
     map1 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','A','A','A','A','~','~','~','~','A'
@@ -31,16 +32,18 @@ ENDM
          DW '~','~','~','~','~','A','~','A','A','A'
          DW '~','~','~','~','A','A','~','~','~','~'
          DW '~','~','~','~','~','A','~','~','~','~'
+         DW '~','~','~','~','~','~','~','~','~','~'
     
-    map2 DW 0,0,0,0,0,0,0,0,0,0
-         DW 0,1,0,1,0,0,0,1,0,0
-         DW 0,1,0,1,0,0,1,1,0,0
-         DW 0,1,0,0,0,0,0,1,0,0
-         DW 0,1,0,0,0,0,0,0,0,0
-         DW 0,0,0,0,0,0,0,0,0,0
-         DW 0,0,0,1,0,0,0,0,1,1
-         DW 0,0,1,1,1,0,0,0,0,0
-         DW 0,0,0,0,0,0,1,1,1,0
+    map2 DW '~','~','~','~','~','~','~','~','~','~'
+         DW '~','A','~','A','~','~','~','A','~','~'
+         DW '~','A','~','A','~','~','A','A','~','~'
+         DW '~','A','~','~','~','~','~','A','~','~'
+         DW '~','A','~','~','~','~','~','~','~','~'
+         DW '~','~','~','~','~','~','~','~','~','~'
+         DW '~','~','~','~','~','~','~','~','A','A'
+         DW '~','~','~','A','~','~','~','~','~','~'
+         DW '~','~','A','A','A','~','~','~','~','~'
+         DW '~','~','~','~','~','~','A','A','A','~'
 
 .CODE
 ; reloads the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
@@ -130,52 +133,93 @@ generateMaps PROC
     LEA DX,map1
     MOV cpuMap,DX
 
+    LEA DX,map2
+    MOV playerMap,DX
+
     CALL copyCPUMap
+
+    CALL copyPLAYERMap
 
     RET
 generateMaps ENDP
 
+; copia um mapa selecionado para o tabuleiro da CPU
 copyCPUMap PROC
-    ; copia um mapa selecionado para o tabuleiro da CPU
     ; endtrada: cpuMap
     ; saida: cpuBoard
 
     XOR BX,BX
-    
-    MOV CX,19
+    MOV DI,cpuMap
+    XOR SI,SI
+    MOV CX,10
 
     COPIAR:
         
         XOR DX,DX
-        MOV DX,cpuMap[BX][DI]
-        MOV cpuBoard[BX][DI],DX
-        ADD DI,2
-        CMP DI,20
+        XCHG BX,DI
+        MOV DX,[BX][SI]
+        XCHG DI,BX
+        MOV cpuBoard[BX][SI],DX
+        ADD SI,2
+        CMP SI,20
         JNZ COPIAR
 
-        ADD BX,DI
-        XOR DI,DI
+        ADD BX,SI
+        ADD DI,SI
+        XOR SI,SI
         LOOP COPIAR
 
     RET
 copyCPUMap ENDP
+
+; copia um mapa selecionado para o tabuleiro do player
+copyPLAYERMap PROC
+    ; endtrada: playerMap
+    ; saida: playerBoard
+
+    XOR BX,BX
+    MOV DI,playerMap
+    XOR SI,SI
+    MOV CX,10
+
+    COPY:
+        
+        XOR DX,DX
+        XCHG BX,DI
+        MOV DX,[BX][SI]
+        XCHG DI,BX
+        MOV playerBoard[BX][SI],DX
+        ADD SI,2
+        CMP SI,20
+        JNZ COPY
+
+        ADD BX,SI
+        ADD DI,SI
+        XOR SI,SI
+        LOOP COPY
+
+    RET
+copyPLAYERMap ENDP
+
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
 
 ; test code
-    CALL randomNumber
+    ; CALL randomNumber
 
-    MOV AH,2h
-    MOV DL,randomNum
-    OR DL,30h
-    INT 21h
+    ; MOV AH,2h
+    ; MOV DL,randomNum
+    ; OR DL,30h
+    ; INT 21h
 
-    pulaLinha
+    ; pulaLinha
 
+    ; CALL reloadScreen
     CALL generateMaps
-
+    pulaLinha
     CALL reloadScreen
+    
 ; end test code
 ; code_overview
 

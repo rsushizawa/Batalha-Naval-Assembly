@@ -17,7 +17,7 @@ ENDM
     playerBoard DW 5 DUP( 10 DUP('~')),5 DUP( 10 DUP('A'))          ; tabuleiro do jogador
     cpuBoard DW 5 DUP( 10 DUP('~')),5 DUP( 10 DUP('A'))             ; tabuleiro da CPU que é exibido na tela
     cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
-    boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o UPDATESCREEN
+    boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o reloadScreen
     randomNum DB ?                                                  ; variável para o número aletório
     playerMap DW ?                                                  ; endereço de memória do mapa selecionado para o player
     cpuMap DW ?                                                     ; endereço de memória do mapa selecionado para a CPU
@@ -122,12 +122,12 @@ randomNumber PROC
     RET
 randomNumber ENDP
 
+; seleciona dois mapas aleatórios diferentes para o PLAYER e a CPU
 generateMaps PROC
-    ; seleciona dois mapas aleatórios diferentes
     ; entrada: randomNum, cpuMap, playerMap
     ; saida: playerBoard,cpuBoard
 
-    LEA DX,[map1]
+    LEA DX,map1
     MOV cpuMap,DX
 
     CALL copyCPUMap
@@ -141,11 +141,12 @@ copyCPUMap PROC
     ; saida: cpuBoard
 
     XOR BX,BX
-    XOR DI,DI
-    XOR DX,DX
-    MOV CX,20
+    
+    MOV CX,19
 
     COPIAR:
+        
+        XOR DX,DX
         MOV DX,cpuMap[BX][DI]
         MOV cpuBoard[BX][DI],DX
         ADD DI,2
@@ -172,7 +173,7 @@ MAIN PROC
 
     pulaLinha
 
-    CALL copyCPUMap
+    CALL generateMaps
 
     CALL reloadScreen
 ; end test code

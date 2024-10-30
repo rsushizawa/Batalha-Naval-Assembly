@@ -24,7 +24,6 @@ ENDM
     playerMap DW ?                                                  ; endereço de memória do mapa selecionado para o player
     cpuMap DW ?                                                     ; endereço de memória do mapa selecionado para a CPU
     maps DW 10 DUP(?)                                               ; vetor de endereços dos mapas
-<<<<<<< HEAD
 
     hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
     coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA'
@@ -33,9 +32,6 @@ ENDM
 
     cpuBoats DB 1,4,3,2,2,4,4
 
-=======
-    
->>>>>>> 1288c7936ff362adec6b4b351e7eb12fd34d33fd
     map0 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
@@ -48,7 +44,6 @@ ENDM
          DW '~','~','~','~','~','~','~','~','~','~'
 
     map1 DW '~','~','~','~','~','~','~','~','~','~'
-<<<<<<< HEAD
          DW '~','E','E','E','E','~','~','~','~','F'
          DW '~','~','~','~','~','~','~','~','~','F'
          DW '~','~','~','~','~','~','S','~','~','F'
@@ -240,7 +235,6 @@ ENDM
          DW 'A','~','~','~','~','A','~','~','~','~'
          DW '~','~','A','A','~','A','~','~','~','~'
          DW '~','~','~','~','~','A','~','A','A','~'
->>>>>>> 1288c7936ff362adec6b4b351e7eb12fd34d33fd
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
     
@@ -474,8 +468,6 @@ auxRandomNumber PROC
 
     RET
 auxRandomNumber ENDP
-
-<<<<<<< HEAD
 inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
@@ -548,8 +540,6 @@ verifyIftargetHit PROC
     RET
 verifyIftargetHit ENDP
 
-=======
->>>>>>> 1288c7936ff362adec6b4b351e7eb12fd34d33fd
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
@@ -558,12 +548,11 @@ MAIN PROC
     CALL addMapsToArray
     CALL generateMaps
     pulaLinha
-<<<<<<< HEAD
+
     CALL updateScreen
 
-=======
     CALL reloadScreen
->>>>>>> 1288c7936ff362adec6b4b351e7eb12fd34d33fd
+
     
 ; end test code
 ; code_overview

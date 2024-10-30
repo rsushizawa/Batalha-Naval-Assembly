@@ -387,6 +387,20 @@ inputPlayerTarget PROC
     RET
 inputPlayerTarget ENDP
 
+inputCpuTarget PROC
+    CALL randomNumber
+    MOV AL,randomNum
+    AND AL,0FH
+    MOV DL,AL
+    INT 21H
+    CALL randomNumber
+    MOV AL,randomNum
+    AND AL,0FH
+    MOV DH,AL
+    
+    RET
+inputCpuTarget ENDP
+
 verifyIftargetHit PROC
     ; entrada: DX (coordenadas do alvo),
     ;          BX OFFSET da matriz a ser lida (player ou cpu), 

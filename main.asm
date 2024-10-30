@@ -12,7 +12,8 @@ pulaLinha MACRO
         INT 21h
     POP DX
     POP AX
-ENDM
+ENDM 
+
 .DATA
     playerBoard DW 10 DUP( 9 DUP('~'),'1')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 9 DUP('~'),'1')                             ; tabuleiro da CPU que é exibido na tela
@@ -31,6 +32,11 @@ ENDM
     playernBoats DB 1,4,3,2,2,4,4
 
     cpuBoats DB 1,4,3,2,2,4,4
+
+    eixoX DW '0','1','2','3','4','5','6','7','8','9'
+    eixoY DW 'A','B','C','D','E','F','G','H','I','J'
+    SAVE_SI DW 0
+
 
     map0 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
@@ -152,6 +158,29 @@ updateScreen PROC
     XOR CX,CX       ; contador auxiliar para as linhas
     XOR DI,DI       ; contador auxiliar pular linhas
 
+    PUSH AX
+    PUSH BX
+    PUSH SI
+    PUSH CX
+    PUSH DX
+    MOV AH,2
+    
+    MOV CX,20
+    XOR SI,SI
+
+    IMPRIME_EIXOX:
+
+    MOV DL,BYTE PTR eixoX[SI]
+    INT 21H
+    INC SI
+    LOOP IMPRIME_EIXOX
+
+    POP AX
+    POP SI
+    POP CX
+    POP DX
+    POP BX
+
 ; START_REPEAT
     REPEAT:
     ; START_SWICH_CASE
@@ -195,6 +224,7 @@ updateScreen PROC
         ; THEN
             JNZ REPEAT
         ; ELSE
+
             pulaLinha
             ADD CX,SI
     ; END_IF

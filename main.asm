@@ -378,7 +378,7 @@ inputPlayerTarget PROC
 
     MOV AH,1h
     INT 21h
-    ANF AL,0Fh
+    AND AL,0Fh
     MOV DL,AL
     INT 21h
     SUB AL,55
@@ -395,22 +395,24 @@ verifyIftargetHit PROC
 
     MOV AL,DH
     MUL DL
-    MOV DI,DL
+    AND DX,00FFh
+    MOV DI,DX
     ADD BX,AX
     MOV AH,9h
-    CMP [BX][DI],'~'
+    MOV CX,[BX][DI]
+    CMP CX,'~'
     JZ MISS
-    CMP [BX][DI],'E'
+    CMP CX,'E'
     JZ HITENCOURAÇADO
-    CMP [BX][DI],'F'
+    CMP CX,'F'
     JZ HITFRAGATA
-    CMP [BX][DI],'S'
+    CMP CX,'S'
     JZ HITSUB1
-    CMP [BX][DI],'s'
+    CMP CX,'s'
     JZ HITSUB2
-    CMP [BX][DI],'H'
+    CMP CX,'H'
     JZ HITHIDRO1
-    CMP [BX][DI],'h'
+    CMP CX,'h'
     JZ HITHIDRO2
     COORDENADAINVALIDA:
     LEA DX,coordenadaInvalidaMsg
@@ -418,28 +420,30 @@ verifyIftargetHit PROC
     JMP EXIT5
 
     HITENCOURAÇADO:
-    DEC [SI+1]
+    DEC BYTE PTR [SI+1]
     JMP HIT
     HITFRAGATA:
-    DEC [SI+2]
+    DEC BYTE PTR [SI+2]
     JMP HIT
     HITSUB1:
-    DEC [SI+3]
+    DEC BYTE PTR [SI+3]
     JMP HIT
     HITSUB2:
-    DEC [SI+4]
+    DEC BYTE PTR [SI+4]
     JMP HIT
     HITHIDRO1:
-    DEC [SI+5]
+    DEC BYTE PTR [SI+5]
     JMP HIT
     HITHIDRO2:
-    DEC [SI+6]
+    DEC BYTE PTR [SI+6]
     HIT:
     LEA DX,hitBoatMsg
     INT 21h
+    MOV CX,'X'
     JMP EXIT5
     MISS:
-    DEC [SI]
+    DEC BYTE PTR [SI]
+    MOV CX,'O'
     EXIT5:
     RET
 verifyIftargetHit ENDP
@@ -455,7 +459,7 @@ MAIN PROC
 
     CALL updateScreen
 
-    CALL reloadScreen
+
 
     
 ; end test code

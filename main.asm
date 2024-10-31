@@ -166,10 +166,20 @@ updateScreen PROC
     MOV AH,2
     
     MOV CX,40
+    MOV DL,32
+    INT 21H
+    INT 21H
+    INT 21H
+    INT 21H
 
     JMP IMPRIME_EIXOX
 
     RESET:
+    MOV DL,32
+    INT 21H
+    INT 21H
+    INT 21H
+    INT 21H
     XOR SI,SI
     DEC CX
     PUSH AX
@@ -187,8 +197,7 @@ updateScreen PROC
     CMP CX,21
     JE RESET
     LOOP IMPRIME_EIXOX
-        MOV DL,32
-    INT 21H
+
 
     pulaLinha
     pulaLinha
@@ -225,10 +234,12 @@ updateScreen PROC
             MOV AH,2
             MOV DL,BYTE PTR eixoY[SI]
             INT 21H
-
             MOV DL,32
             INT 21H
             INT 21H
+            INT 21H
+
+
             ADD SI,2
 
             MOV SAVE_SI,SI
@@ -274,6 +285,8 @@ updateScreen PROC
 
 
     MOV SAVE_SI,0
+    pulaLinha
+    pulaLinha
     RET
 updateScreen ENDP
 
@@ -529,7 +542,7 @@ MAIN PROC
     pulaLinha
 
     CALL updateScreen
-    CALL generateMaps
+    CALL copyCPUMap
     CALL updateScreen
     
 

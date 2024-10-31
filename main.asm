@@ -34,7 +34,7 @@ ENDM
     cpuBoats DB 1,4,3,2,2,4,4
 
     eixoX DW '0','1','2','3','4','5','6','7','8','9'
-    eixoY DW 'A','B','C','D','E','F','G','H','I','J'
+    eixoY DW 'A','A','B','B','C','C','D','D','E','E','F','F','G','G','H','H','I','I','J','J'
     SAVE_SI DW 0
 
 
@@ -165,16 +165,33 @@ updateScreen PROC
     PUSH DX
     MOV AH,2
     
-    MOV CX,20
+    MOV CX,40
+
+    JMP IMPRIME_EIXOX
+
+    RESET:
     XOR SI,SI
+    DEC CX
+    PUSH AX
+    MOV AH,9
+    LEA DX,boardspace
+    INT 21H
+    POP AX
+
+
 
     IMPRIME_EIXOX:
-
     MOV DL,BYTE PTR eixoX[SI]
     INT 21H
     INC SI
+    CMP CX,21
+    JE RESET
     LOOP IMPRIME_EIXOX
+        MOV DL,32
+    INT 21H
 
+    pulaLinha
+    pulaLinha
     POP AX
     POP SI
     POP CX
@@ -184,7 +201,7 @@ updateScreen PROC
 ; START_REPEAT
     REPEAT:
     ; START_SWICH_CASE
-        ; verifica se está no começo da linha
+    ; verifica se está no começo da linha
         TEST DI,1       
         JZ PLAYER
         ; se não estiver então imprime a CPUBOARD
@@ -198,7 +215,27 @@ updateScreen PROC
 
     ; imprimir a linha do tabuleiro selecionado em DX
     ; START_REPEAT
-        CONTINUE:
+        CONTINUE:  
+            PUSH DX     
+            PUSH AX
+            PUSH SI
+
+            MOV SI,SAVE_SI
+
+            MOV AH,2
+            MOV DL,BYTE PTR eixoY[SI]
+            INT 21H
+
+            MOV DL,32
+            INT 21H
+            INT 21H
+            ADD SI,2
+
+            MOV SAVE_SI,SI
+
+            POP SI
+            POP AX
+            POP DX
             XOR SI,SI
             MOV AH,2h
             ADD DX,CX
@@ -227,12 +264,16 @@ updateScreen PROC
 
             pulaLinha
             ADD CX,SI
+
+            
     ; END_IF
 
 ; END_REPEAT_CONDITION
     CMP CX,0C8h
     JNZ REPEAT
 
+
+    MOV SAVE_SI,0
     RET
 updateScreen ENDP
 
@@ -488,6 +529,9 @@ MAIN PROC
     pulaLinha
 
     CALL updateScreen
+    CALL generateMaps
+    CALL updateScreen
+    
 
 
 

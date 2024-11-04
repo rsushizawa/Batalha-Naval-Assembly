@@ -14,8 +14,8 @@ pulaLinha MACRO
     POP AX
 ENDM
 .DATA
-    playerBoard DW 10 DUP( 9 DUP('~'),'1')                          ; tabuleiro do jogador
-    cpuBoard DW 10 DUP( 9 DUP('~'),'1')                             ; tabuleiro da CPU que é exibido na tela
+    playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
+    cpuBoard DW 10 DUP( 10 DUP('~'),'$')                             ; tabuleiro da CPU que é exibido na tela
     cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
     boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o reloadScreen
     seed DW 24653                                                   ; Initial seed value (can be changed for different sequences)
@@ -31,6 +31,9 @@ ENDM
     playernBoats DB 1,4,3,2,2,4,4
 
     cpuBoats DB 1,4,3,2,2,4,4
+
+    eixoX DW '0','1','2','3','4','5','6','7','8','9','$'
+    eixoY DB 'A','B','C','D','E','F','G','H','I','J'
 
     map0 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
@@ -148,60 +151,49 @@ updateScreen PROC
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
-    XOR BX,BX       ; contador para as linhas
-    XOR CX,CX       ; contador auxiliar para as linhas
-    XOR DI,DI       ; contador auxiliar pular linhas
-
-; START_REPEAT
+    MOV CX,10
+    XOR BX,BX
+    XOR DI,DI
+    MOV AH,2h
+    MOV DL,' '
+    INT 21h
+    INT 21h
+    MOV AH,9h
+    LEA DX,eixoX
+    INT 21h
+    LEA DX,boardSpace
+    INT 21h
+    MOV AH,2h
+    MOV DL,' '
+    INT 21h
+    INT 21h
+    MOV AH,9h
+    LEA DX,eixoX
+    INT 21h
+    pulaLinha
     REPEAT:
-    ; START_SWICH_CASE
-        ; verifica se está no começo da linha
-        TEST DI,1       
-        JZ PLAYER
-        ; se não estiver então imprime a CPUBOARD
-        LEA DX,CPUBOARD
-        JMP CONTINUE
-
-        PLAYER:
-        ; se estiver no começo da linha então imrprime a PLEYERBOARD
-        LEA DX,PLAYERBOARD
-    ; END_SWICH_CASE
-
-    ; imprimir a linha do tabuleiro selecionado em DX
-    ; START_REPEAT
-        CONTINUE:
-            XOR SI,SI
-            MOV AH,2h
-            ADD DX,CX
-            MOV BX,DX
-        IMPRIME:
-            MOV DL,[BX][SI]
-            INT 21h
-
-            INC SI
-            CMP SI,20
-            JNZ IMPRIME
-    ; END_REPEAT
-    ; imprime 7 caracteres de espaço
-    SPACE:
-        MOV AH,09h
-        LEA DX,BOARDSPACE
+        MOV AH,2h
+        MOV DL,eixoY[DI]
         INT 21h
-
-    ; START_IF
-            INC DI
-        ; IF DI IS ODD
-            TEST DI,1
-        ; THEN
-            JNZ REPEAT
-        ; ELSE
-            pulaLinha
-            ADD CX,SI
-    ; END_IF
-
-; END_REPEAT_CONDITION
-    CMP CX,0C8h
-    JNZ REPEAT
+        MOV DL,' '
+        INT 21h
+        MOV AH,9h
+        LEA DX,playerBoard[BX]
+        INT 21h
+        LEA DX,boardSpace
+        INT 21h
+        MOV AH,2h
+        MOV DL,eixoY[DI]
+        INT 21h
+        MOV DL,' '
+        INT 21h
+        MOV AH,9h
+        LEA DX,cpuBoard[BX]      
+        INT 21h
+        pulaLinha
+        ADD BX,22
+        INC DI
+        LOOP REPEAT
 
     RET
 updateScreen ENDP
@@ -284,8 +276,8 @@ copyCPUMap PROC
         CMP SI,20
         JNZ COPIAR
 
-        ADD BX,SI
-        ADD DI,SI
+        ADD BX,22
+        ADD DI,20
         XOR SI,SI
         LOOP COPIAR
 
@@ -313,8 +305,8 @@ copyPLAYERMap PROC
         CMP SI,20
         JNZ COPY
 
-        ADD BX,SI
-        ADD DI,SI
+        ADD BX,22
+        ADD DI,20
         XOR SI,SI
         LOOP COPY
 
@@ -372,6 +364,7 @@ auxRandomNumber PROC
 
     RET
 auxRandomNumber ENDP
+
 inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)

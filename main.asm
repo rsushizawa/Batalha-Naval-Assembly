@@ -388,18 +388,32 @@ inputPlayerTarget PROC
 inputPlayerTarget ENDP
 
 inputCpuTarget PROC
+    INPUT:
+    MOV BX,20
     CALL randomNumber
     MOV AL,randomNum
-    AND AL,0FH
-    MOV DL,AL
-    INT 21H
-    CALL randomNumber
-    MOV AL,randomNum
-    AND AL,0FH
+    OR 00FFH,AX
     MOV DH,AL
+    MUL DX
+    MOV BX,AX
+
+    MOV DI,2
+    CALL randomNumber
+    MOV AL,randomNum
+    OR 00FFH,AX
+    MOV DL,AL
+    MUL DI
+    MOV DI,AX
     
+    CMP cpuSecret[BX][DI],'O' 
+    JE INPUT
+
+    CMP cpuSecret[BX][DI],'X' 
+    JE INPUT
+
     RET
 inputCpuTarget ENDP
+
 
 verifyIftargetHit PROC
     ; entrada: DX (coordenadas do alvo),

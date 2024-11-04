@@ -448,6 +448,48 @@ verifyIftargetHit PROC
     RET
 verifyIftargetHit ENDP
 
+;Procedimento para ataque da CPU
+CPUattack PROC
+    ;entrada: randomNumber
+    ;saída: transforma a posição da matriz atacada em X ou O dependendo se foi um ataque bem-sucedido ou não
+    PUSH BX
+    PUSH DI
+    PUSH AX
+    PUSH CX
+    PUSH DX
+    
+    DO_WHILE:
+        XOR AX,AX
+        CALL randomNumber
+        MOV BL,randomNum
+        MOV AL,22
+        MUL BL
+        MOV BX,AX
+        CALL randomNumber
+        MOV AH,randomNum
+        MOV AL,2
+        MUL AH
+        MOV DI,AX
+        MOV CX,playerBoard[BX][DI]
+        CMP CX,'X'
+        JZ DO_WHILE
+        CMP CX,'O'
+        JZ DO_WHILE
+        XOR DX,DX
+        MOV DX,DI
+        MOV DH,BL
+        ROR DX,8
+        CALL verifyIftargetHit
+
+    POP DX
+    POP CX
+    POP AX
+    POP DI
+    POP BX
+
+    RET
+CPUattack ENDP
+
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
@@ -458,6 +500,10 @@ MAIN PROC
     pulaLinha
 
     CALL updateScreen
+
+    CALL inputPlayerTarget
+
+    CALL CPUATTA
 
 
 

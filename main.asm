@@ -16,14 +16,14 @@ ENDM
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 10 DUP('~'),'$')                             ; tabuleiro da CPU que é exibido na tela
-    cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
-    boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o reloadScreen
-    seed DW 24653                                                   ; Initial seed value (can be changed for different sequences)
-    multiplier DW 13849                                             ; Multiplier constant for LCG
-    randomNum DB 0                                                  ; Storage for random number between 0 and 9
-    playerMap DW ?                                                  ; endereço de memória do mapa selecionado para o player
-    cpuMap DW ?                                                     ; endereço de memória do mapa selecionado para a CPU
-    maps DW 10 DUP(?)                                               ; vetor de endereços dos mapas
+    cpuSecret DW 10 DUP( 10 DUP('~'),'$')                            ; tabuleiro da CPU
+    boardSpace DB 32,32,32,32,32,32,32,'$'                           ; string de spaços para o reloadScreen
+    seed DW 24653                                                    ; Initial seed value (can be changed for different sequences)
+    multiplier DW 13849                                              ; Multiplier constant for LCG
+    randomNum DB 0                                                   ; Storage for random number between 0 and 9
+    playerMap DW ?                                                   ; endereço de memória do mapa selecionado para o player
+    cpuMap DW ?                                                      ; endereço de memória do mapa selecionado para a CPU
+    maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
     hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
     coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA'
@@ -32,7 +32,7 @@ ENDM
 
     cpuBoats DB 1,4,3,2,2,4,4
 
-    eixoX DW '0','1','2','3','4','5','6','7','8','9','$'
+    eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
 
     map0 DW '~','~','~','~','~','~','~','~','~','~'
@@ -146,47 +146,45 @@ ENDM
          DW '~','~','~','~','~','~','~','~','~','~'
     
 .CODE
-; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
+
 updateScreen PROC
+    ; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
     MOV CX,10
     XOR BX,BX
     XOR DI,DI
-    MOV AH,2h
-    MOV DL,' '
-    INT 21h
-    INT 21h
+    ; o index do eixo x da matriz (numeros)
     MOV AH,9h
     LEA DX,eixoX
     INT 21h
     LEA DX,boardSpace
     INT 21h
-    MOV AH,2h
-    MOV DL,' '
-    INT 21h
-    INT 21h
-    MOV AH,9h
     LEA DX,eixoX
     INT 21h
     pulaLinha
+    ; for_loop
     REPEAT:
+        ; imprime a letra da linha correspondente
         MOV AH,2h
         MOV DL,eixoY[DI]
         INT 21h
         MOV DL,' '
         INT 21h
+        ; imprime uma linha da matriz do jogador
         MOV AH,9h
         LEA DX,playerBoard[BX]
         INT 21h
         LEA DX,boardSpace
         INT 21h
+        ; imprime a letra da linha correspondente
         MOV AH,2h
         MOV DL,eixoY[DI]
         INT 21h
         MOV DL,' '
         INT 21h
+        ; imprime uma linha da matriz da cpu
         MOV AH,9h
         LEA DX,cpuBoard[BX]      
         INT 21h
@@ -194,12 +192,14 @@ updateScreen PROC
         ADD BX,22
         INC DI
         LOOP REPEAT
-
+    ; end_for
     RET
 updateScreen ENDP
 
-; gera um número aleatório entre 0 e 9
 randomNumber PROC
+    ; gera um número aleatório entre 0 e 9
+    ; entrada: seed,multiplier,randomNum
+    ; saida: randomNum
     CALL auxRandomNumber
     ; Load the seed into AX
     MOV AX,seed
@@ -221,14 +221,15 @@ randomNumber PROC
     RET
 randomNumber ENDP
 
-; seleciona dois mapas aleatórios para o PLAYER e a CPU
 generateMaps PROC
+    ; seleciona dois mapas aleatórios para o PLAYER e a CPU
     ; entrada: randomNum, cpuMap, playerMap,maps
     ; saida: playerBoard,cpuBoard
 
     XOR BX,BX
     XOR DX,DX
 
+    ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em playerMap
     CALL randomNumber
     MOV AH,2h
     MOV DL,randomNum
@@ -239,6 +240,7 @@ generateMaps PROC
     MOV DX,maps[BX]
     MOV playerMap,DX
 
+    ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em cpuMap
     CALL randomNumber
     MOV AH,2h
     MOV DL,randomNum
@@ -249,14 +251,15 @@ generateMaps PROC
     MOV DX,maps[BX]
     MOV cpuMap,DX
 
+    ; copia os mapas selecionados em playerMap e cpuMap nas matrizes playerBoard e cpuSecret
     CALL copyPLAYERMap
     CALL copyCPUMap
 
     RET
 generateMaps ENDP
 
-; copia um mapa selecionado para o tabuleiro da CPU
 copyCPUMap PROC
+    ; copia um mapa selecionado para o tabuleiro da CPU
     ; endtrada: cpuMap
     ; saida: cpuBoard
 
@@ -284,8 +287,8 @@ copyCPUMap PROC
     RET
 copyCPUMap ENDP
 
-; copia um mapa selecionado para o tabuleiro do player
 copyPLAYERMap PROC
+    ; copia um mapa selecionado para o tabuleiro do player
     ; endtrada: playerMap
     ; saida: playerBoard
 
@@ -313,8 +316,8 @@ copyPLAYERMap PROC
     RET
 copyPLAYERMap ENDP
 
-; add the maps offset to the array maps
 addMapsToArray PROC
+    ; add the maps offset to the array maps for random map selection
     ; entrada: maps,map0,map1,map2,map3,map4,map5,map6,map7,map8,map9
     ; saida: maps
 
@@ -345,8 +348,10 @@ addMapsToArray PROC
 
 addMapsToArray ENDP
 
-; random number for multiplyer
 auxRandomNumber PROC
+    ; random number for multiplier
+    ; entrada: void
+    ; saida: multiplier
     XOR CX,CX
 
     MOV AH,0
@@ -376,6 +381,31 @@ inputPlayerTarget PROC
     INT 21h
     SUB AL,55
     MOV DH,AL
+
+    DO_WHILE2:
+        XOR AX,AX
+        MOV AH,1h
+        INT 21h
+        AND AL,0Fh
+        MOV BL,AL
+        MOV AL,22
+        MUL BL
+        MOV BX,AX
+        INT 21h
+        SUB AL,55
+        MOV AL,2
+        MUL AH
+        MOV DI,AX
+        MOV CX,playerBoard[BX][DI]
+        CMP CX,'X'
+        JZ DO_WHILE2
+        CMP CX,'O'
+        JZ DO_WHILE2
+        XOR DX,DX
+        MOV DX,DI
+        MOV DH,BL
+        ROR DX,8
+        CALL verifyIftargetHit
 
     RET
 inputPlayerTarget ENDP
@@ -441,8 +471,8 @@ verifyIftargetHit PROC
     RET
 verifyIftargetHit ENDP
 
-;Procedimento para ataque da CPU
-CPUattack PROC
+inputCpuTarget PROC
+    ;Procedimento para ataque da CPU
     ;entrada: randomNumber
     ;saída: transforma a posição da matriz atacada em X ou O dependendo se foi um ataque bem-sucedido ou não
     PUSH BX
@@ -481,7 +511,7 @@ CPUattack PROC
     POP BX
 
     RET
-CPUattack ENDP
+inputCpuTarget ENDP
 
 MAIN PROC
     MOV AX,@DATA
@@ -496,7 +526,7 @@ MAIN PROC
 
     CALL inputPlayerTarget
 
-    CALL CPUATTA
+    CALL inputCpuTarget
 
 
 

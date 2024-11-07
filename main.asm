@@ -221,6 +221,28 @@ randomNumber PROC
     RET
 randomNumber ENDP
 
+auxRandomNumber PROC
+    ; random number for multiplier
+    ; entrada: void
+    ; saida: multiplier
+    XOR CX,CX
+
+    MOV AH,0
+    INT 1ah
+
+    MOV AX,DX
+    XOR DX,DX
+    MOV BX,10
+    DIV BX
+    
+    MOV CL,DL
+    INT 21h
+
+    ADD multiplier,CX
+
+    RET
+auxRandomNumber ENDP
+
 generateMaps PROC
     ; seleciona dois mapas aleatórios para o PLAYER e a CPU
     ; entrada: randomNum, cpuMap, playerMap,maps
@@ -348,55 +370,24 @@ addMapsToArray PROC
 
 addMapsToArray ENDP
 
-auxRandomNumber PROC
-    ; random number for multiplier
-    ; entrada: void
-    ; saida: multiplier
-    XOR CX,CX
-
-    MOV AH,0
-    INT 1ah
-
-    MOV AX,DX
-    XOR DX,DX
-    MOV BX,10
-    DIV BX
-    
-    MOV CL,DL
-    INT 21h
-
-    ADD multiplier,CX
-
-    RET
-auxRandomNumber ENDP
-
 inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
 
-    MOV AH,1h
-    INT 21h
-    AND AL,0Fh
-    MOV DL,AL
-    INT 21h
-    SUB AL,55
-    MOV DH,AL
-
     DO_WHILE2:
-        XOR AX,AX
         MOV AH,1h
         INT 21h
         AND AL,0Fh
-        MOV BL,AL
-        MOV AL,22
+        MOV BL,22
         MUL BL
         MOV BX,AX
+        MOV AH,1h
         INT 21h
         SUB AL,55
-        MOV AL,2
-        MUL AH
+        MOV DL,2
+        MUL DL
         MOV DI,AX
-        MOV CX,playerBoard[BX][DI]
+        MOV CX,cpuSecret[BX][DI]
         CMP CX,'X'
         JZ DO_WHILE2
         CMP CX,'O'
@@ -404,38 +395,66 @@ inputPlayerTarget PROC
         XOR DX,DX
         MOV DX,DI
         MOV DH,BL
-        ROR DX,8
-        CALL verifyIftargetHit
 
     RET
 inputPlayerTarget ENDP
 
+inputCpuTarget PROC
+    ;Procedimento para ataque da CPU
+    ;entrada: randomNumber
+    ;saída: 
+    
+    DO_WHILE:
+        MOV AH,1h
+        INT 21h
+        AND AL,0Fh
+        MOV BL,2
+        MUL BL
+        MOV DI,AX
+        MOV AH,1h
+        INT 21h
+        SUB AL,55
+        MOV BL,22
+        MUL BL
+        MOV BX,AX
+        MOV CX,playerBoard[BX][DI]
+        CMP CX,'X'
+        JZ DO_WHILE
+        CMP CX,'O'
+        JZ DO_WHILE
+        XOR DX,DX
+        MOV DX,DI
+        MOV DH,BL
+
+
+    RET
+inputCpuTarget ENDP
+
 verifyIftargetHit PROC
-    ; entrada: DX (coordenadas do alvo),
-    ;          BX OFFSET da matriz a ser lida (player ou cpu), 
+    ; entrada: DX (DL:x-cordenada DH: y-coordenada),
+    ;          BX OFFSET da matriz a ser lida (player ou cpu),
     ;          SI OFFSET do vetor dos barcos
     ; saida: void encreve na tela se foi acertado algum alvo
 
-    MOV AL,DH
-    MUL DL
+    ADD BL,DH
     AND DX,00FFh
-    MOV DI,DX
-    ADD BX,AX
+    ADD DI,DX
+
     MOV AH,9h
-    MOV CX,[BX][DI]
-    CMP CX,'~'
+    MOV DX,[BX][DI]
+    CMP DX,'~'
     JZ MISS
-    CMP CX,'E'
+    CMP DX,'E'
     JZ HITENCOURAÇADO
-    CMP CX,'F'
+    CMP DX,'F'
     JZ HITFRAGATA
-    CMP CX,'S'
+    CMP DX,'S'
     JZ HITSUB1
-    CMP CX,'s'
+    CMP DX,'s'
     JZ HITSUB2
-    CMP CX,'H'
+    CMP DX,'H'
     JZ HITHIDRO1
-    CMP CX,'h'
+    CMP DX,'h'
     JZ HITHIDRO2
     COORDENADAINVALIDA:
     LEA DX,coordenadaInvalidaMsg
@@ -462,102 +481,56 @@ verifyIftargetHit PROC
     HIT:
     LEA DX,hitBoatMsg
     INT 21h
-    MOV CX,'X'
+    MOV DX,'X'
+    MOV [BX][DI],DX
     JMP EXIT5
     MISS:
     DEC BYTE PTR [SI]
-    MOV CX,'O'
+    MOV DX,'O'
+    MOV [BX][DI],DX
     EXIT5:
     RET
 verifyIftargetHit ENDP
 
-inputCpuTarget PROC
-    ;Procedimento para ataque da CPU
-    ;entrada: randomNumber
-    ;saída: transforma a posição da matriz atacada em X ou O dependendo se foi um ataque bem-sucedido ou não
-    PUSH BX
-    PUSH DI
-    PUSH AX
-    PUSH CX
-    PUSH DX
-    
-    DO_WHILE:
-        XOR AX,AX
-        CALL randomNumber
-        MOV BL,randomNum
-        MOV AL,22
-        MUL BL
-        MOV BX,AX
-        CALL randomNumber
-        MOV AH,randomNum
-        MOV AL,2
-        MUL AH
-        MOV DI,AX
-        MOV CX,playerBoard[BX][DI]
-        CMP CX,'X'
-        JZ DO_WHILE
-        CMP CX,'O'
-        JZ DO_WHILE
-        XOR DX,DX
-        MOV DX,DI
-        MOV DH,BL
-        ROR DX,8
-        CALL verifyIftargetHit
-
-    POP DX
-    POP CX
-    POP AX
-    POP DI
-    POP BX
-
-    RET
-inputCpuTarget ENDP
-
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
-
-; test code
-    CALL addMapsToArray
-    CALL generateMaps
-    pulaLinha
-
-    CALL updateScreen
-
-    CALL inputPlayerTarget
-
-    CALL inputCpuTarget
-
-
-
     
 ; end test code
 ; code_overview
 
-    ; gerarMapas
+    CALL addMapsToArray
+    CALL generateMaps
+    pulaLinha
 
-    ; REPEAT
+    MAIN_REPEAT:
     ;     updateScreen
+        CALL updateScreen
         
-    ;     REPEAT
-    ;         selecionaAlvo
+        PLAYER_REPEAT:
+                CALL inputPlayerTarget
+                LEA BX,playerBoard
+                LEA SI,playernBoats
+                CALL verifyIftargetHit
+                ; update matrix
+                CALL updateScreen
+            MOV CL,playernBoats[0]
+            OR CL,CL
+            JNZ PLAYER_REPEAT
 
-    ;         verificaAcerto
+        CPU_REPEAT:
+                CALL inputCpuTarget
+                LEA BX,cpuSecret
+                LEA SI,cpuBoats
+                CALL verifyIftargetHit
+                ; update matrix
+                CALL updateScreen
+            MOV CL,cpuBoats[0]
+            OR CL,CL
+            JNZ CPU_REPEAT
+        
+        ; verify if all boats of one of the players have sinken
 
-    ;         updateMatrix
-
-    ;         updateScreen
-    ;     UNTIL TIRO = ERRO
-
-    ;     REPEAT
-    ;         selecionaAlvoAleatorio
-
-    ;         verificaAcerto
-
-    ;         updateMatrix
-
-    ;         updateScreen
-    ;     UNTIL TIRO = ERRO
     ; UNTIL ALL BOATS OF ONE OF THE PLAYER HAVE SINKEN
 
     ; endScreen

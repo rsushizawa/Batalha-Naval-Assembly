@@ -26,7 +26,7 @@ ENDM
     maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
     hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
-    coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA'
+    coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA$'
 
     playernBoats DB 1,4,3,2,2,4,4
 
@@ -378,15 +378,15 @@ inputPlayerTarget PROC
         MOV AH,1h
         INT 21h
         AND AL,0Fh
-        MOV BL,22
+        MOV BL,2
         MUL BL
-        MOV BX,AX
+        MOV DI,AX
         MOV AH,1h
         INT 21h
-        SUB AL,55
-        MOV DL,2
+        SUB AL,'A'
+        MOV DL,22
         MUL DL
-        MOV DI,AX
+        MOV BX,AX
         MOV CX,cpuSecret[BX][DI]
         CMP CX,'X'
         JZ DO_WHILE2
@@ -398,6 +398,44 @@ inputPlayerTarget PROC
 
     RET
 inputPlayerTarget ENDP
+    PUSH CX
+    PUSH AX
+    PUSH SI
+    PUSH BX
+
+
+    XOR BX,BX
+
+    NEWLINE:
+        MOV CX,10
+        XOR SI,SI
+    TRANSFER:
+        MOV AX,cpuSecret[BX][SI]
+        CMP AX,'X'
+        JZ SUBSTITUTE
+        CMP AX,'O'
+        JZ SUBSTITUTE
+
+    CONTINUE_TRANSFER:
+        ADD SI,2
+        LOOP TRANSFER
+        ADD BX,22
+        CMP SI,18
+        JNZ NEWLINE
+
+        RET
+
+    SUBSTITUTE:
+        MOV cpuBoard[BX][SI],AX
+        JMP CONTINUE_TRANSFER
+
+
+
+    POP BX
+    POP SI
+    POP AX
+    POP CX
+
 
 inputCpuTarget PROC
     ;Procedimento para ataque da CPU
@@ -459,6 +497,7 @@ verifyIftargetHit PROC
     COORDENADAINVALIDA:
     LEA DX,coordenadaInvalidaMsg
     INT 21h
+    pulaLinha
     JMP EXIT5
 
     HITENCOURAÇADO:
@@ -492,6 +531,13 @@ verifyIftargetHit PROC
     RET
 verifyIftargetHit ENDP
 
+;description
+verifySunkships PROC
+    
+
+
+verifySunkships ENDP
+
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
@@ -509,8 +555,10 @@ MAIN PROC
         
         PLAYER_REPEAT:
                 CALL inputPlayerTarget
+                pulaLinha
                 LEA BX,playerBoard
                 LEA SI,playernBoats
+                
                 CALL verifyIftargetHit
                 ; update matrix
                 CALL updateScreen
@@ -522,6 +570,7 @@ MAIN PROC
                 CALL inputCpuTarget
                 LEA BX,cpuSecret
                 LEA SI,cpuBoats
+                
                 CALL verifyIftargetHit
                 ; update matrix
                 CALL updateScreen

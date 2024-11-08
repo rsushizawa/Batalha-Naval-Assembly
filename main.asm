@@ -26,7 +26,7 @@ ENDM
     maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
     hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
-    coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA'
+    coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA$'
 
     playernBoats DB 1,4,3,2,2,4,4
 
@@ -44,7 +44,7 @@ ENDM
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
+         DW '~','~','~','~','~','~','~','~','~','~' 
 
     map1 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','E','E','E','E','~','~','~','~','F'
@@ -114,10 +114,10 @@ ENDM
     
     map7 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','H','~'
-         DW '~','~','E','E','E','E','~','H','H','~'
          DW '~','~','~','~','~','~','~','~','H','~'
-         DW '~','S','S','~','~','~','~','~','~','~'
          DW '~','~','~','~','F','F','F','~','~','~'
+         DW '~','~','E','E','E','E','~','H','H','~'
+         DW '~','S','S','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','s','s','~','~','~','h','~','~','~'
          DW '~','~','~','~','~','~','h','h','~','~'
@@ -152,6 +152,8 @@ updateScreen PROC
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
+    pulaLinha
+
     MOV CX,10
     XOR BX,BX
     XOR DI,DI
@@ -174,7 +176,7 @@ updateScreen PROC
         INT 21h
         ; imprime uma linha da matriz do jogador
         MOV AH,9h
-        LEA DX,playerBoard[BX]
+        LEA DX,cpuBoard[BX]
         INT 21h
         LEA DX,boardSpace
         INT 21h
@@ -186,7 +188,7 @@ updateScreen PROC
         INT 21h
         ; imprime uma linha da matriz da cpu
         MOV AH,9h
-        LEA DX,cpuBoard[BX]      
+        LEA DX,playerBoard[BX]      
         INT 21h
         pulaLinha
         ADD BX,22
@@ -377,16 +379,28 @@ inputPlayerTarget PROC
     DO_WHILE2:
         MOV AH,1h
         INT 21h
-        AND AL,0Fh
-        MOV BL,22
-        MUL BL
-        MOV BX,AX
+
+        SUB AL,30H
+
+        CMP AL,9
+        JA COORDENADAINVALIDA
+
+        AND AX,000FH
+
+        MOV DI,AX
+
         MOV AH,1h
         INT 21h
-        SUB AL,55
-        MOV DL,2
+
+        SUB AL,'A'
+
+        CMP AL,9
+        JA COORDENADAINVALIDA
+        
+        MOV DL,22
         MUL DL
-        MOV DI,AX
+        MOV BX,AX
+
         MOV CX,cpuSecret[BX][DI]
         CMP CX,'X'
         JZ DO_WHILE2
@@ -397,7 +411,63 @@ inputPlayerTarget PROC
         MOV DH,BL
 
     RET
+
+    COORDENADAINVALIDA:
+    PUSH AX
+    pulaLinha
+    MOV AH,9
+    LEA DX,coordenadaInvalidaMsg
+    INT 21h
+    pulaLinha
+    POP AX
+    JMP DO_WHILE2
 inputPlayerTarget ENDP
+
+;description
+transferSecrettoBoard PROC
+    
+    PUSH CX
+    PUSH AX
+    PUSH SI
+    PUSH BX
+
+
+    XOR BX,BX
+
+    NEWLINE:
+        MOV CX,10
+        XOR SI,SI
+    TRANSFER:
+        MOV AX,cpuSecret[BX][SI]
+        CMP AX,'X'
+        JZ SUBSTITUTE
+        CMP AX,'O'
+        JZ SUBSTITUTE
+
+    CONTINUE_TRANSFER:
+        ADD SI,2
+        LOOP TRANSFER
+        ADD BX,22
+        CMP SI,18
+        JNZ NEWLINE
+
+        RET
+
+    SUBSTITUTE:
+        MOV cpuBoard[BX][SI],AX
+        JMP CONTINUE_TRANSFER
+
+
+
+    POP BX
+    POP SI
+    POP AX
+    POP CX
+
+    RET
+
+transferSecrettoBoard ENDP    
+
 
 inputCpuTarget PROC
     ;Procedimento para ataque da CPU
@@ -407,16 +477,21 @@ inputCpuTarget PROC
     DO_WHILE:
         MOV AH,1h
         INT 21h
-        AND AL,0Fh
-        MOV BL,2
-        MUL BL
+
+        SUB AL,30H
+
+        AND AX,000FH
+
         MOV DI,AX
+
         MOV AH,1h
         INT 21h
-        SUB AL,55
-        MOV BL,22
-        MUL BL
+
+        SUB AL,'A'
+        MOV DL,22
+        MUL DL
         MOV BX,AX
+
         MOV CX,playerBoard[BX][DI]
         CMP CX,'X'
         JZ DO_WHILE
@@ -425,7 +500,6 @@ inputCpuTarget PROC
         XOR DX,DX
         MOV DX,DI
         MOV DH,BL
-
 
     RET
 inputCpuTarget ENDP
@@ -441,7 +515,7 @@ verifyIftargetHit PROC
     ADD DI,DX
 
     MOV AH,9h
-    MOV DX,[BX][DI]
+    MOV DX,WORD PTR [BX][DI]
     CMP DX,'~'
     JZ MISS
     CMP DX,'E'
@@ -456,9 +530,9 @@ verifyIftargetHit PROC
     JZ HITHIDRO1
     CMP DX,'h'
     JZ HITHIDRO2
-    COORDENADAINVALIDA:
     LEA DX,coordenadaInvalidaMsg
     INT 21h
+    pulaLinha
     JMP EXIT5
 
     HITENCOURAÇADO:
@@ -481,6 +555,7 @@ verifyIftargetHit PROC
     HIT:
     LEA DX,hitBoatMsg
     INT 21h
+    pulaLinha
     MOV DX,'X'
     MOV [BX][DI],DX
     JMP EXIT5
@@ -491,6 +566,13 @@ verifyIftargetHit PROC
     EXIT5:
     RET
 verifyIftargetHit ENDP
+
+;description
+verifySunkships PROC
+    
+
+
+verifySunkships ENDP
 
 MAIN PROC
     MOV AX,@DATA
@@ -509,8 +591,10 @@ MAIN PROC
         
         PLAYER_REPEAT:
                 CALL inputPlayerTarget
+                pulaLinha
                 LEA BX,playerBoard
                 LEA SI,playernBoats
+                
                 CALL verifyIftargetHit
                 ; update matrix
                 CALL updateScreen
@@ -522,6 +606,7 @@ MAIN PROC
                 CALL inputCpuTarget
                 LEA BX,cpuSecret
                 LEA SI,cpuBoats
+                
                 CALL verifyIftargetHit
                 ; update matrix
                 CALL updateScreen

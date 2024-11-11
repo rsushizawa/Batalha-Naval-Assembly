@@ -34,13 +34,12 @@ ENDM
 
     playerBoats DB 4,3,2,2,4,4
     hitBoat DB 1
-
     cpuBoats DB 4,3,2,2,4,4
 
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
 
-    map0 DW '~','~','~','~','~','~','~','~','~','~'
+    map0 DW '~','~','~','~','~','~','~','~','~\','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
@@ -303,7 +302,7 @@ copyCPUMap PROC
         XCHG BX,DI
         MOV DX,[BX][SI]
         XCHG DI,BX
-        MOV cpuSecret[BX][SI],DX
+        MOV cpuBoard[BX][SI],DX
         ADD SI,2
         CMP SI,20
         JNZ COPIAR
@@ -381,52 +380,32 @@ inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
 
-    DO_WHILE2:
-        MOV AH,1h
-        INT 21h
+    INPUT1:
+    MOV AH,1h
+    INT 21h
+    AND AX,000FH
+    SHL AX,1
+    MOV DI,AX
+    
+    MOV AH,1h
+    INT 21h
+    SUB AL,'A'
+    AND AX,000FH
+    MOV BX,22
+    MUL BL
+    MOV BX,AX
+    
+    CMP cpuSecret[BX][DI],'O' 
+    JZ INPUT1
 
-        SUB AL,30H
+    CMP cpuSecret[BX][DI],'X' 
+    JZ INPUT1
 
-        CMP AL,9
-        JA COORDENADAINVALIDA
-
-        AND AX,000FH
-        SHL AX,1
-
-        MOV DI,AX
-
-        MOV AH,1h
-        INT 21h
-
-        SUB AL,'A'
-
-        CMP AL,9
-        JA COORDENADAINVALIDA
-        
-        MOV DL,22
-        MUL DL
-        MOV BX,AX
-
-        MOV CX,cpuSecret[BX][DI]
-        CMP CX,'X'
-        JZ DO_WHILE2
-        CMP CX,'O'
-        JZ DO_WHILE2
-        XOR DX,DX
-        MOV DX,DI
-        MOV DH,BL
+    XOR DX,DX
+    MOV DX,DI
+    MOV DH,BL
 
     RET
-
-    COORDENADAINVALIDA:
-    PUSH AX
-    pulaLinha
-    MOV AH,9
-    LEA DX,coordenadaInvalidaMsg
-    INT 21h
-    pulaLinha
-    POP AX
-    JMP DO_WHILE2
 inputPlayerTarget ENDP
 
 transferSecrettoBoard PROC
@@ -472,19 +451,16 @@ transferSecrettoBoard ENDP
 
 inputCpuTarget PROC
     INPUT:
-    MOV BX,22
     CALL randomNumber
     MOV AH,2
     MOV DL,randomNum
-    OR DL,30h
+    ADD DL,30h
     INT 21h
     MOV AL,randomNum
     AND AX,000FH
-    MOV DH,AL
-    MUL BX
-    MOV BX,AX
+    SHL AX,1
+    MOV DI,AX
 
-    MOV DI,2
     CALL randomNumber
     MOV AH,2
     MOV DL,randomNum
@@ -492,15 +468,17 @@ inputCpuTarget PROC
     INT 21h
     MOV AL,randomNum
     AND AX,000FH
-    MOV DL,AL
-    MUL DI
-    MOV DI,AX
+    MOV BX,22
+    MUL BL
+    MOV BX,AX
+
+
     
     CMP cpuSecret[BX][DI],'O' 
-    JE INPUT
+    JZ INPUT
 
     CMP cpuSecret[BX][DI],'X' 
-    JE INPUT
+    JZ INPUT
 
     XOR DX,DX
     MOV DX,DI

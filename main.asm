@@ -1,5 +1,6 @@
 .MODEL SMALL 
 .STACK 100h
+
 ; macro de pulara 1 linha
 pulaLinha MACRO
     PUSH AX
@@ -31,11 +32,11 @@ ENDM
     playerInputMsg DB 10,13,'DIGITE AS CONDENADAS DO SEU ALVO (NUMERO/LETRA): $'
     cpuTurnMsg DB 10,13,'VEZ DA CPU$'
     cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
-
-    playerBoats DB 4,3,2,2,4,4
     hitBoat DB 1
-
+    playerBoats DB 4,3,2,2,4,4
     cpuBoats DB 4,3,2,2,4,4
+    sunkShips DB 0
+
 
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
@@ -586,11 +587,73 @@ verifyIftargetHit PROC
     RET
 verifyIftargetHit ENDP
 
-verifySunkships PROC
+verifyPlayerSunkships PROC
+    
+    PUSH AX
+    PUSH SI
+
+    XOR SI,SI
+
+    COMPARE:
+        MOV AL,playerBoats[SI]
+        CMP AL,0
+        JNZ CONTINUA
+        INC BYTE PTR sunkShips
+    
+    CONTINUA:
+        INC SI
+        CMP SI,5
+        JZ ENDING
+        CMP BYTE PTR sunkShips,6
+        JZ GAMEOVER
+        JMP COMPARE
+
+    ENDING:
+        MOV BYTE PTR sunkShips,0
+        POP SI
+        POP AX
+        RET  
+
+    GAMEOVER:
+        MOV AH,4ch
+        INT 21H
     
 
+verifyPlayerSunkships ENDP
 
-verifySunkships ENDP
+verifyCPUSunkships PROC
+    
+    PUSH AX
+    PUSH SI
+
+    XOR SI,SI
+
+    COMPARE_CPU:
+        MOV AL,cpuBoats[SI]
+        CMP AL,0
+        JNZ CONTINUA_CPU
+        INC BYTE PTR sunkShips
+    
+    CONTINUA_CPU:
+        INC SI
+        CMP SI,5
+        JZ ENDING
+        CMP BYTE PTR sunkShips,6
+        JZ GAMEOVER_CPU
+        JMP COMPARE
+
+    ENDING_CPU:
+        MOV BYTE PTR sunkShips,0
+        POP SI
+        POP AX
+        RET 
+
+    GAMEOVER_CPU:
+        MOV AH,4ch
+        INT 21h
+
+
+verifyCPUSunkships ENDP
 
 MAIN PROC
     MOV AX,@DATA
@@ -622,6 +685,7 @@ MAIN PROC
             JNZ PLAYER_REPEAT
 
             INC BYTE PTR hitBoat
+            CALL verifyCPUSunkships
 
         CPU_REPEAT:
             MOV AH,9h
@@ -638,6 +702,7 @@ MAIN PROC
             MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT
+            CALL verifyPlayerSunkships
         
         ; verify if all boats of one of the players have sinken
 
@@ -646,7 +711,5 @@ MAIN PROC
     ; endScreen
 ;  end code_overview
 
-    MOV AH,4ch
-    INT 21h
 MAIN ENDP
 END MAIN

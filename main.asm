@@ -32,9 +32,10 @@ ENDM
     cpuTurnMsg DB 10,13,'VEZ DA CPU$'
     cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
 
-    playerBoats DB 1,4,3,2,2,4,4
+    playerBoats DB 4,3,2,2,4,4
+    hitBoat DB 1
 
-    cpuBoats DB 1,4,3,2,2,4,4
+    cpuBoats DB 4,3,2,2,4,4
 
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
@@ -180,7 +181,7 @@ updateScreen PROC
         INT 21h
         ; imprime uma linha da matriz da cpu
         MOV AH,9h
-        LEA DX,cpuBoard[BX]
+        LEA DX,playerBoard[BX]
         INT 21h
         LEA DX,boardSpace
         INT 21h
@@ -192,7 +193,7 @@ updateScreen PROC
         INT 21h
         ; imprime uma linha da matriz do jogador
         MOV AH,9h
-        LEA DX,playerBoard[BX]      
+        LEA DX,cpuBoard[BX]      
         INT 21h
         pulaLinha
         ADD BX,22
@@ -302,7 +303,7 @@ copyCPUMap PROC
         XCHG BX,DI
         MOV DX,[BX][SI]
         XCHG DI,BX
-        MOV cpuBoard[BX][SI],DX
+        MOV cpuSecret[BX][SI],DX
         ADD SI,2
         CMP SI,20
         JNZ COPIAR
@@ -478,19 +479,19 @@ inputCpuTarget PROC
     OR DL,30h
     INT 21h
     MOV AL,randomNum
-    OR AX,00FFH
+    AND AX,000FH
     MOV DH,AL
-    MUL DX
+    MUL BX
     MOV BX,AX
 
     MOV DI,2
     CALL randomNumber
     MOV AH,2
     MOV DL,randomNum
-    OR DL,30h
+    ADD DL,65
     INT 21h
     MOV AL,randomNum
-    OR AX,00FFH
+    AND AX,000FH
     MOV DL,AL
     MUL DI
     MOV DI,AX
@@ -514,7 +515,6 @@ verifyIftargetHit PROC
     ;          SI OFFSET do vetor dos barcos
     ; saida: void encreve na tela se foi acertado algum alvo
 
-
     ADD BL,DH
     AND DX,00FFh
     MOV DI,DX
@@ -528,37 +528,37 @@ verifyIftargetHit PROC
     ; case [input] = 'E'
         CMP DX,'E'
         JNZ CONTINUE1
-        DEC BYTE PTR [SI+1]
+        DEC BYTE PTR [SI]
         JMP HIT ; break
     CONTINUE1:
     ; case [input] = 'F'
         CMP DX,'F'
         JNZ CONTINUE2
-        DEC BYTE PTR [SI+2]
+        DEC BYTE PTR [SI+1]
         JMP HIT ; break
     CONTINUE2:
     ; case [input] = 'S'
         CMP DX,'S'
         JNZ CONTINUE3
-        DEC BYTE PTR [SI+3]
+        DEC BYTE PTR [SI+2]
         JMP HIT ; break
     CONTINUE3:
     ; case [input] = 's'
         CMP DX,'s'
         JNZ CONTINUE4
-        DEC BYTE PTR [SI+4]
+        DEC BYTE PTR [SI+3]
         JMP HIT ; break
     CONTINUE4:
     ; case [input] = 'H'
         CMP DX,'H'
         JNZ CONTINUE5
-        DEC BYTE PTR [SI+5]
+        DEC BYTE PTR [SI+4]
         JMP HIT ; break
     CONTINUE5:
     ; case [input] = 'h'
         CMP DX,'h'
         JNZ CONTINUE6
-        DEC BYTE PTR [SI+6]
+        DEC BYTE PTR [SI+5]
         JMP HIT ; break
     CONTINUE6:
     ; default: coordenadaInválida 
@@ -578,7 +578,7 @@ verifyIftargetHit PROC
         JMP EXIT5
     ; else if miss
     MISS:
-        DEC BYTE PTR [SI]
+        DEC BYTE PTR hitBoat
         MOV DX,'O'
         MOV [BX][DI],DX
     ; else
@@ -612,14 +612,16 @@ MAIN PROC
             INT 21h
                 CALL inputPlayerTarget
                 pulaLinha
-                LEA BX,cpuSecret
+                LEA BX,cpuBoard
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
-                CALL transferSecrettoBoard
+                ; CALL transferSecrettoBoard    
                 CALL updateScreen
-            MOV CL,cpuBoats[0]
+            MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
+
+            INC BYTE PTR hitBoat
 
         CPU_REPEAT:
             MOV AH,9h
@@ -631,9 +633,9 @@ MAIN PROC
                 LEA BX,playerBoard
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
-                CALL transferSecrettoBoard
+                ; CALL transferSecrettoBoard
                 CALL updateScreen
-            MOV CL,playerBoats[0]
+            MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT
         

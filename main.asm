@@ -25,6 +25,7 @@ ENDM
     cpuMap DW ?                                                      ; endereço de memória do mapa selecionado para a CPU
     maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
+    missBoatMsg DB 10,13,'VOCE ERROU$'
     hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
     coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA$'
     playerTurnMsg DB 10,13,'VEZ DO JOGADOR$'
@@ -380,32 +381,52 @@ inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
 
-    INPUT1:
-    MOV AH,1h
-    INT 21h
-    AND AX,000FH
-    SHL AX,1
-    MOV DI,AX
-    
-    MOV AH,1h
-    INT 21h
-    SUB AL,'A'
-    AND AX,000FH
-    MOV BX,22
-    MUL BL
-    MOV BX,AX
-    
-    CMP cpuSecret[BX][DI],'O' 
-    JZ INPUT1
+    DO_WHILE2:
+        MOV AH,1h
+        INT 21h
 
-    CMP cpuSecret[BX][DI],'X' 
-    JZ INPUT1
+        SUB AL,30H
 
-    XOR DX,DX
-    MOV DX,DI
-    MOV DH,BL
+        CMP AL,9
+        JA COORDENADAINVALIDA
+
+        AND AX,000FH
+        SHL AX,1
+
+        MOV DI,AX
+
+        MOV AH,1h
+        INT 21h
+
+        SUB AL,'A'
+
+        CMP AL,9
+        JA COORDENADAINVALIDA
+        
+        MOV DL,22
+        MUL DL
+        MOV BX,AX
+
+        MOV CX,cpuSecret[BX][DI]
+        CMP CX,'X'
+        JZ DO_WHILE2
+        CMP CX,'O'
+        JZ DO_WHILE2
+        XOR DX,DX
+        MOV DX,DI
+        MOV DH,BL
 
     RET
+
+    COORDENADAINVALIDA:
+    PUSH AX
+    pulaLinha
+    MOV AH,9
+    LEA DX,coordenadaInvalidaMsg
+    INT 21h
+    pulaLinha
+    POP AX
+    JMP DO_WHILE2
 inputPlayerTarget ENDP
 
 transferSecrettoBoard PROC
@@ -493,13 +514,15 @@ verifyIftargetHit PROC
     ;          SI OFFSET do vetor dos barcos
     ; saida: void encreve na tela se foi acertado algum alvo
 
-    ADD BL,DH
+    XOR CX,CX
+    MOV CL,DH
+    ADD BX,CX
     AND DX,00FFh
     MOV DI,DX
 
     MOV AH,9h
     ; switch (input)
-    MOV DX,WORD PTR [BX][DI]
+    MOV DX,[BX][DI]
     ; case [input] = '~'
         CMP DX,'~'
         JZ MISS
@@ -556,6 +579,8 @@ verifyIftargetHit PROC
         JMP EXIT5
     ; else if miss
     MISS:
+        LEA DX,missBoatMsg
+        INT 21h
         DEC BYTE PTR hitBoat
         MOV DX,'O'
         MOV [BX][DI],DX
@@ -589,7 +614,6 @@ MAIN PROC
             LEA DX,playerInputMsg
             INT 21h
                 CALL inputPlayerTarget
-                pulaLinha
                 LEA BX,cpuBoard
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
@@ -611,7 +635,6 @@ MAIN PROC
                 LEA BX,playerBoard
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
-                ; CALL transferSecrettoBoard
                 CALL updateScreen
             MOV CL,hitBoat
             OR CL,CL

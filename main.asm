@@ -2,12 +2,13 @@
 .STACK 100h
 ; macro de pulara 1 linha
 clearScreen MACRO 
-    pulaLinha
-    pulaLinha
-    pulaLinha
-    pulaLinha
-    pulaLinha
-    pulaLinha
+    PUSH AX
+    PUSH DX
+    MOV AH,9
+    LEA DX,clearScreenString
+    INT 21h
+    POP DX
+    POP AX
 ENDM
 
 
@@ -85,6 +86,8 @@ ENDM
     cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
 
     delayMsg DB 10,13,'PRESS ENTER TO CONTINUE$'
+
+    clearScreenString DB 10 DUP(10),13,'$'
 
     playerBoats DB 4,3,2,2,4,4
     hitBoat DB 1
@@ -748,10 +751,11 @@ MAIN PROC
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
                 CALL verifyCPUSunkships
-                CALL transferSecrettoBoard    
+                ; CALL transferSecrettoBoard    
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
+            CALL updateScreen
             delay
             
 
@@ -764,21 +768,18 @@ MAIN PROC
             INT 21h
             LEA DX,cpuInputMsg
             INT 21h
-            delay
                 CALL inputCpuTarget
                 LEA BX,playerBoard
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
                 CALL verifyPlayerSunkships
+                CALL updateScreen
                 delay
             MOV CL,hitBoat
             OR CL,CL
-            JNZ CPU_REPEAT
-            
+            JNZ CPU_REPEAT            
 
             INC BYTE PTR hitBoat
-            delay
-
         JMP PLAYER_REPEAT
 
     MOV AH,4ch

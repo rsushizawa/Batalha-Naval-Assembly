@@ -48,11 +48,12 @@ ENDM
     cpuMap DW ?                                                      ; endereço de memória do mapa selecionado para a CPU
     maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
-    missBoatMsg DB 10,13,'ERROU$'
+    missBoatMsg DB 10,13,'ACERTOU AGUA$'
     hitBoatMsg DB 10,13,'ACERTOU UM NAVIO$'
+    boatSunken DB 10,13,'UM NAVIO FOI NAUFRAGADO$'
     coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA$'
     playerTurnMsg DB 10,13,'VEZ DO JOGADOR$'
-    playerInputMsg DB 10,13,'DIGITE AS CONDENADAS DO SEU ALVO (NUMERO/LETRA): $'
+    playerInputMsg DB 10,13,'DIGITE AS COORDENADAS DO SEU ALVO (NUMERO/LETRA): $'
     cpuTurnMsg DB 10,13,'VEZ DA CPU$'
     cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
 
@@ -61,8 +62,11 @@ ENDM
     clearScreenString DB 10 DUP(10),13,'$'
 
     playerBoats DB 4,3,2,2,4,4
+    playerBoatsSunken DB 0
     hitBoat DB 1
     cpuBoats DB 4,3,2,2,4,4
+    cpuBoatsSunken DB 0
+    cpuTarget DB ?,?
     sunkShips DB 0
 
 
@@ -510,23 +514,22 @@ transferSecrettoBoard PROC
 transferSecrettoBoard ENDP    
 
 inputCpuTarget PROC
+    MOV AH,9h
+    LEA DX,cpuTurnMsg
+    INT 21h
+    LEA DX,cpuInputMsg
+    INT 21h
     INPUT:
     CALL randomNumber
-    MOV AH,2
-    MOV DL,randomNum
-    ADD DL,30h
-    INT 21h
     MOV AL,randomNum
+    MOV BYTE PTR cpuTarget[0],AL
     AND AX,000FH
     SHL AX,1
     MOV DI,AX
 
     CALL randomNumber
-    MOV AH,2
-    MOV DL,randomNum
-    ADD DL,65
-    INT 21h
     MOV AL,randomNum
+    MOV BYTE PTR cpuTarget[1],AL
     AND AX,000FH
     MOV BX,22
     MUL BL
@@ -539,6 +542,16 @@ inputCpuTarget PROC
 
     CMP cpuSecret[BX][DI],'X' 
     JZ INPUT
+
+    MOV AH,2
+    MOV DL,cpuTarget[0]
+    ADD DL,30h
+    INT 21h
+
+    MOV AH,2
+    MOV DL,cpuTarget[1]
+    ADD DL,65
+    INT 21h
 
     XOR DX,DX
     MOV DX,DI
@@ -558,7 +571,6 @@ verifyIftargetHit PROC
     ADD BX,CX
     AND DX,00FFh
     MOV DI,DX
-    clearScreen
     MOV AH,9h
     ; switch (input)
     MOV DX,[BX][DI]
@@ -648,12 +660,22 @@ verifyPlayerSunkships PROC
     CONTINUA:
         CMP BYTE PTR sunkShips,6
         JAE GAMEOVER
+        MOV DL,sunkShips
+        MOV DH,playerBoatsSunken
+        CMP DL,DH
+        JNZ PRINTSUNKENBOAT
         CMP SI,5
         JAE ENDING
         
         
         INC SI
         JMP COMPARE
+
+    PRINTSUNKENBOAT:
+        INC BYTE PTR playerBoatsSunken
+        MOV AH,9
+        LEA DX,boatSunken
+        INT 21h
 
     ENDING:
         MOV BYTE PTR sunkShips,0
@@ -686,11 +708,20 @@ verifyCPUSunkships PROC
     CONTINUA_CPU:
         CMP BYTE PTR sunkShips,6
         JAE GAMEOVER_CPU
+        MOV DL,sunkShips
+        MOV DH,cpuBoatsSunken
+        CMP DL,DH
+        JNZ PRINTSUNKENBOAT1
         CMP SI,5
         JAE ENDING_CPU
         
         INC SI
         JMP COMPARE_CPU
+    PRINTSUNKENBOAT1:
+        INC BYTE PTR cpuBoatsSunken
+        MOV AH,9
+        LEA DX,boatSunken
+        INT 21h
 
     ENDING_CPU:
         MOV BYTE PTR sunkShips,0
@@ -716,38 +747,38 @@ MAIN PROC
     CALL updateScreen
         PLAYER_REPEAT:
                 CALL inputPlayerTarget
+                PUSH AX
+                MOV AH,1
+                INT 21h
+                POP AX
                 LEA BX,cpuSecret
                 LEA SI,cpuBoats
+                clearScreen
                 CALL verifyIftargetHit
                 CALL verifyCPUSunkships
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
-            clearScreen
-            CALL updateScreen
             delay
             
 
             INC BYTE PTR hitBoat
-        CPU_REPEAT:
             clearScreen
             CALL updateScreen
-            MOV AH,9h
-            LEA DX,cpuTurnMsg
-            INT 21h
-            LEA DX,cpuInputMsg
-            INT 21h
+            clearScreen
+        CPU_REPEAT:
                 CALL inputCpuTarget
                 LEA BX,playerBoard
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
                 CALL verifyPlayerSunkships
-                CALL updateScreen
                 delay
             MOV CL,hitBoat
             OR CL,CL
-            JNZ CPU_REPEAT            
-
+            JNZ CPU_REPEAT
+            clearScreen       
+            clearScreen
+            CALL updateScreen
             INC BYTE PTR hitBoat
         JMP PLAYER_REPEAT
 

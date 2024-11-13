@@ -36,6 +36,8 @@ ENDM
     playerBoats DB 4,3,2,2,4,4
     hitBoat DB 1
     cpuBoats DB 4,3,2,2,4,4
+    sunkShips DB 0
+
 
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
@@ -303,7 +305,7 @@ copyCPUMap PROC
         XCHG BX,DI
         MOV DX,[BX][SI]
         XCHG DI,BX
-        MOV cpuBoard[BX][SI],DX
+        MOV cpuSecret[BX][SI],DX
         ADD SI,2
         CMP SI,20
         JNZ COPIAR
@@ -443,16 +445,17 @@ transferSecrettoBoard PROC
         XOR SI,SI
     TRANSFER:
         MOV AX,cpuSecret[BX][SI]
-        CMP AX,'X'
+        CMP AL,'X'
         JZ SUBSTITUTE
-        CMP AX,'O'
+        CMP AL,'O'
         JZ SUBSTITUTE
 
     CONTINUE_TRANSFER:
         ADD SI,2
         LOOP TRANSFER
+
         ADD BX,22
-        CMP SI,18
+        CMP BX,220
         JNZ NEWLINE
 
         RET
@@ -589,11 +592,73 @@ verifyIftargetHit PROC
     RET
 verifyIftargetHit ENDP
 
-verifySunkships PROC
+verifyPlayerSunkships PROC
+    
+    PUSH AX
+    PUSH SI
+
+    XOR SI,SI
+
+    COMPARE:
+        MOV AL,playerBoats[SI]
+        CMP AL,0
+        JNZ CONTINUA
+        INC BYTE PTR sunkShips
+    
+    CONTINUA:
+        INC SI
+        CMP SI,5
+        JZ ENDING
+        CMP BYTE PTR sunkShips,6
+        JZ GAMEOVER
+        JMP COMPARE
+
+    ENDING:
+        MOV BYTE PTR sunkShips,0
+        POP SI
+        POP AX
+        RET  
+
+    GAMEOVER:
+        MOV AH,4ch
+        INT 21H
     
 
+verifyPlayerSunkships ENDP
 
-verifySunkships ENDP
+verifyCPUSunkships PROC
+    
+    PUSH AX
+    PUSH SI
+
+    XOR SI,SI
+
+    COMPARE_CPU:
+        MOV AL,cpuBoats[SI]
+        CMP AL,0
+        JNZ CONTINUA_CPU
+        INC BYTE PTR sunkShips
+    
+    CONTINUA_CPU:
+        INC SI
+        CMP SI,5
+        JZ ENDING
+        CMP BYTE PTR sunkShips,6
+        JZ GAMEOVER_CPU
+        JMP COMPARE
+
+    ENDING_CPU:
+        MOV BYTE PTR sunkShips,0
+        POP SI
+        POP AX
+        RET 
+
+    GAMEOVER_CPU:
+        MOV AH,4ch
+        INT 21h
+
+
+verifyCPUSunkships ENDP
 
 MAIN PROC
     MOV AX,@DATA
@@ -614,10 +679,10 @@ MAIN PROC
             LEA DX,playerInputMsg
             INT 21h
                 CALL inputPlayerTarget
-                LEA BX,cpuBoard
+                LEA BX,cpuSecret
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
-                ; CALL transferSecrettoBoard    
+                CALL transferSecrettoBoard    
                 CALL updateScreen
             MOV CL,hitBoat
             OR CL,CL

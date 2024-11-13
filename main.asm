@@ -13,6 +13,12 @@ pulaLinha MACRO
     POP DX
     POP AX
 ENDM
+delay MACRO
+    PUSH AX
+    MOV AH,1
+    INT 21h
+    POP AX
+ENDM
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 10 DUP('~'),'$')                             ; tabuleiro da CPU que é exibido na tela
@@ -42,7 +48,7 @@ ENDM
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
 
-    map0 DW '~','~','~','~','~','~','~','~','~\','~'
+    map0 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
@@ -305,7 +311,7 @@ copyCPUMap PROC
         XCHG BX,DI
         MOV DX,[BX][SI]
         XCHG DI,BX
-        MOV cpuSecret[BX][SI],DX
+        MOV cpuBoard[BX][SI],DX
         ADD SI,2
         CMP SI,20
         JNZ COPIAR
@@ -458,16 +464,18 @@ transferSecrettoBoard PROC
         CMP BX,220
         JNZ NEWLINE
 
+        POP BX
+        POP SI
+        POP AX
+        POP CX
+
         RET
 
     SUBSTITUTE:
         MOV cpuBoard[BX][SI],AX
         JMP CONTINUE_TRANSFER
 
-    POP BX
-    POP SI
-    POP AX
-    POP CX
+
 
     RET
 
@@ -609,6 +617,7 @@ verifyPlayerSunkships PROC
         INC SI
         CMP SI,5
         JZ ENDING
+        
         CMP BYTE PTR sunkShips,6
         JZ GAMEOVER
         JMP COMPARE
@@ -668,18 +677,17 @@ MAIN PROC
     CALL addMapsToArray
     CALL generateMaps
     pulaLinha
-
-    MAIN_REPEAT:
-        CALL updateScreen
-        
         PLAYER_REPEAT:
+
+        
+            CALL updateScreen
             MOV AH,9h
             LEA DX,playerTurnMsg
             INT 21h
             LEA DX,playerInputMsg
             INT 21h
                 CALL inputPlayerTarget
-                LEA BX,cpuSecret
+                LEA BX,cpuBoard
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
                 CALL transferSecrettoBoard    
@@ -687,6 +695,7 @@ MAIN PROC
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
+            CALL verifyCPUSunkships
 
             INC BYTE PTR hitBoat
 
@@ -704,13 +713,11 @@ MAIN PROC
             MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT
-        
-        ; verify if all boats of one of the players have sinken
+            CALL verifyPlayerSunkships
 
-    ; UNTIL ALL BOATS OF ONE OF THE PLAYER HAVE SINKEN
+            INC BYTE PTR hitBoat
 
-    ; endScreen
-;  end code_overview
+        JMP PLAYER_REPEAT
 
     MOV AH,4ch
     INT 21h

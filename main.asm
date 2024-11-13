@@ -15,8 +15,13 @@ pulaLinha MACRO
 ENDM
 delay MACRO
     PUSH AX
+    PUSH DX
+    MOV AH,9
+    LEA DX,delayMsg
+    INT 21h
     MOV AH,1
     INT 21h
+    POP DX
     POP AX
 ENDM
 .DATA
@@ -38,6 +43,8 @@ ENDM
     playerInputMsg DB 10,13,'DIGITE AS CONDENADAS DO SEU ALVO (NUMERO/LETRA): $'
     cpuTurnMsg DB 10,13,'VEZ DA CPU$'
     cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
+
+    delayMsg DB 10,13,'PRESS ENTER TO CONTINUE$'
 
     playerBoats DB 4,3,2,2,4,4
     hitBoat DB 1
@@ -253,6 +260,7 @@ auxRandomNumber PROC
     MOV CL,DL
     INT 21h
 
+    MOV seed,CX
     ADD multiplier,CX
 
     RET
@@ -388,8 +396,14 @@ addMapsToArray ENDP
 inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
-
+    MOV AH,9h
+    LEA DX,playerTurnMsg
+    INT 21h
     DO_WHILE2:
+        MOV AH,9h
+        LEA DX,playerInputMsg
+        INT 21h
+
         MOV AH,1h
         INT 21h
 
@@ -678,14 +692,7 @@ MAIN PROC
     CALL generateMaps
     pulaLinha
         PLAYER_REPEAT:
-
-        
             CALL updateScreen
-            MOV AH,9h
-            LEA DX,playerTurnMsg
-            INT 21h
-            LEA DX,playerInputMsg
-            INT 21h
                 CALL inputPlayerTarget
                 LEA BX,cpuBoard
                 LEA SI,cpuBoats
@@ -695,21 +702,25 @@ MAIN PROC
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
+            delay
             CALL verifyCPUSunkships
 
             INC BYTE PTR hitBoat
 
         CPU_REPEAT:
+            CALL updateScreen
             MOV AH,9h
             LEA DX,cpuTurnMsg
             INT 21h
             LEA DX,cpuInputMsg
             INT 21h
+            delay
                 CALL inputCpuTarget
                 LEA BX,playerBoard
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
                 CALL updateScreen
+                delay
             MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT

@@ -10,8 +10,6 @@ clearScreen MACRO
     POP DX
     POP AX
 ENDM
-
-
 pulaLinha MACRO
     PUSH AX
     PUSH DX
@@ -38,33 +36,6 @@ delay MACRO
     POP AX
 ENDM
 
-imprime_string MACRO string
-    LOCAL PRINTF
-    PUSH SI
-    PUSH AX
-    PUSH DX
-    PUSH CX
-
-    MOV CX,6
-    LEA SI,string
-    
-PRINTF:
-        MOV AH,2
-
-        MOV DL,[SI]
-        ADD DL,'0'
-        INT 21H
-        MOV DL,' '
-        INT 21H
-        INC SI
-        LOOP PRINTF
-
-    POP CX
-    POP DX
-    POP AX
-    POP SI
-    
-ENDM
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 10 DUP('~'),'$')                             ; tabuleiro da CPU que é exibido na tela
@@ -77,8 +48,8 @@ ENDM
     cpuMap DW ?                                                      ; endereço de memória do mapa selecionado para a CPU
     maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
-    missBoatMsg DB 10,13,'VOCE ERROU$'
-    hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
+    missBoatMsg DB 10,13,'ERROU$'
+    hitBoatMsg DB 10,13,'ACERTOU UM NAVIO$'
     coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA$'
     playerTurnMsg DB 10,13,'VEZ DO JOGADOR$'
     playerInputMsg DB 10,13,'DIGITE AS CONDENADAS DO SEU ALVO (NUMERO/LETRA): $'
@@ -98,16 +69,16 @@ ENDM
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
 
-    map0 DW '~','~','~','~','~','~','~','~','~','~'
+    map0 DW '~','~','~','~','~','~','H','~','~','~'
+         DW '~','~','s','~','~','H','H','H','~','~'
+         DW '~','~','s','~','~','~','~','~','~','~'
+         DW 'h','~','~','~','~','~','~','~','~','~'
+         DW 'h','h','~','~','~','F','~','~','~','~'
+         DW 'h','~','~','~','~','F','~','~','~','~'
+         DW '~','~','~','~','~','F','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~' 
+         DW '~','~','~','~','~','~','~','~','S','~'
+         DW '~','~','E','E','E','E','~','~','S','~' 
 
     map1 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','E','E','E','E','~','~','~','~','F'
@@ -362,7 +333,7 @@ copyCPUMap PROC
         XCHG BX,DI
         MOV DX,[BX][SI]
         XCHG DI,BX
-        MOV cpuBoard[BX][SI],DX
+        MOV cpuSecret[BX][SI],DX
         ADD SI,2
         CMP SI,20
         JNZ COPIAR
@@ -587,7 +558,7 @@ verifyIftargetHit PROC
     ADD BX,CX
     AND DX,00FFh
     MOV DI,DX
-
+    clearScreen
     MOV AH,9h
     ; switch (input)
     MOV DX,[BX][DI]
@@ -639,19 +610,23 @@ verifyIftargetHit PROC
 
     ; if hit
     HIT:
+        MOV DX,'X'
+        MOV [BX][DI],DX
+        CALL transferSecrettoBoard
+        CALL updateScreen
         LEA DX,hitBoatMsg
         INT 21h
         pulaLinha
-        MOV DX,'X'
-        MOV [BX][DI],DX
         JMP EXIT5
     ; else if miss
     MISS:
+        MOV DX,'O'
+        MOV [BX][DI],DX
+        CALL transferSecrettoBoard
+        CALL updateScreen
         LEA DX,missBoatMsg
         INT 21h
         DEC BYTE PTR hitBoat
-        MOV DX,'O'
-        MOV [BX][DI],DX
     ; else
     EXIT5:
     RET
@@ -663,8 +638,6 @@ verifyPlayerSunkships PROC
     PUSH SI
 
     XOR SI,SI
-
-    imprime_string playerBoats
 
     COMPARE:
         MOV AL,playerBoats[SI]
@@ -704,8 +677,6 @@ verifyCPUSunkships PROC
 
     XOR SI,SI
 
-    imprime_string cpuBoats
-
     COMPARE_CPU:
         MOV AL,BYTE PTR cpuBoats[SI]
         CMP AL,0
@@ -728,7 +699,6 @@ verifyCPUSunkships PROC
         RET 
 
     GAMEOVER_CPU:
-        imprime_string cpuBoats
         MOV AH,4ch
         INT 21h
 
@@ -743,18 +713,17 @@ MAIN PROC
     CALL addMapsToArray
     CALL generateMaps
     pulaLinha
+    CALL updateScreen
         PLAYER_REPEAT:
-            clearScreen
-            CALL updateScreen
                 CALL inputPlayerTarget
-                LEA BX,cpuBoard
+                LEA BX,cpuSecret
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
                 CALL verifyCPUSunkships
-                ; CALL transferSecrettoBoard    
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
+            clearScreen
             CALL updateScreen
             delay
             

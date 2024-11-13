@@ -1,6 +1,16 @@
 .MODEL SMALL 
 .STACK 100h
 ; macro de pulara 1 linha
+clearScreen MACRO 
+    pulaLinha
+    pulaLinha
+    pulaLinha
+    pulaLinha
+    pulaLinha
+    pulaLinha
+ENDM
+
+
 pulaLinha MACRO
     PUSH AX
     PUSH DX
@@ -676,6 +686,7 @@ verifyPlayerSunkships PROC
         RET  
 
     GAMEOVER:
+        clearScreen
         CALL updateScreen
         MOV AH,4ch
         INT 21H
@@ -730,6 +741,7 @@ MAIN PROC
     CALL generateMaps
     pulaLinha
         PLAYER_REPEAT:
+            clearScreen
             CALL updateScreen
                 CALL inputPlayerTarget
                 LEA BX,cpuBoard
@@ -745,6 +757,7 @@ MAIN PROC
 
             INC BYTE PTR hitBoat
         CPU_REPEAT:
+            clearScreen
             CALL updateScreen
             MOV AH,9h
             LEA DX,cpuTurnMsg
@@ -764,6 +777,7 @@ MAIN PROC
             
 
             INC BYTE PTR hitBoat
+            delay
 
         JMP PLAYER_REPEAT
 

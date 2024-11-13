@@ -646,13 +646,13 @@ verifyPlayerSunkships PROC
         INC BYTE PTR sunkShips
     
     CONTINUA:
-        INC SI
         CMP BYTE PTR sunkShips,6
-        JZ GAMEOVER
+        JAE GAMEOVER
         CMP SI,5
-        JZ ENDING
+        JAE ENDING
         
         
+        INC SI
         JMP COMPARE
 
     ENDING:
@@ -662,6 +662,7 @@ verifyPlayerSunkships PROC
         RET  
 
     GAMEOVER:
+        CALL updateScreen
         MOV AH,4ch
         INT 21H
     
@@ -678,18 +679,18 @@ verifyCPUSunkships PROC
     imprime_string cpuBoats
 
     COMPARE_CPU:
-        MOV AL,cpuBoats[SI]
+        MOV AL,BYTE PTR cpuBoats[SI]
         CMP AL,0
         JNZ CONTINUA_CPU
         INC BYTE PTR sunkShips
     
     CONTINUA_CPU:
-        INC SI
         CMP BYTE PTR sunkShips,6
-        JZ GAMEOVER_CPU
+        JAE GAMEOVER_CPU
         CMP SI,5
-        JZ ENDING_CPU
+        JAE ENDING_CPU
         
+        INC SI
         JMP COMPARE_CPU
 
     ENDING_CPU:
@@ -699,6 +700,7 @@ verifyCPUSunkships PROC
         RET 
 
     GAMEOVER_CPU:
+        imprime_string cpuBoats
         MOV AH,4ch
         INT 21h
 

@@ -1,6 +1,15 @@
 .MODEL SMALL 
 .STACK 100h
 ; macro de pulara 1 linha
+clearScreen MACRO 
+    PUSH AX
+    PUSH DX
+    MOV AH,9
+    LEA DX,clearScreenString
+    INT 21h
+    POP DX
+    POP AX
+ENDM
 pulaLinha MACRO
     PUSH AX
     PUSH DX
@@ -13,38 +22,63 @@ pulaLinha MACRO
     POP DX
     POP AX
 ENDM
+delay MACRO
+    LOCAL PRINTF
+    PRINTF:
+    PUSH AX
+    PUSH DX
+    MOV AH,9
+    LEA DX,delayMsg
+    INT 21h
+    MOV AH,1
+    INT 21h
+    POP DX
+    POP AX
+ENDM
+
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 10 DUP('~'),'$')                             ; tabuleiro da CPU que é exibido na tela
-    cpuSecret DW 10 DUP( 10 DUP('~'))                               ; tabuleiro da CPU
-    boardSpace DB 32,32,32,32,32,32,32,'$'                          ; string de spaços para o reloadScreen
-    seed DW 24653                                                   ; Initial seed value (can be changed for different sequences)
-    multiplier DW 13849                                             ; Multiplier constant for LCG
-    randomNum DB 0                                                  ; Storage for random number between 0 and 9
-    playerMap DW ?                                                  ; endereço de memória do mapa selecionado para o player
-    cpuMap DW ?                                                     ; endereço de memória do mapa selecionado para a CPU
-    maps DW 10 DUP(?)                                               ; vetor de endereços dos mapas
+    cpuSecret DW 10 DUP( 10 DUP('~'),'$')                            ; tabuleiro da CPU
+    boardSpace DB 32,32,32,32,32,32,32,'$'                           ; string de spaços para o reloadScreen
+    seed DW 24653                                                    ; Initial seed value (can be changed for different sequences)
+    multiplier DW 13849                                              ; Multiplier constant for LCG
+    randomNum DB 0                                                   ; Storage for random number between 0 and 9
+    playerMap DW ?                                                   ; endereço de memória do mapa selecionado para o player
+    cpuMap DW ?                                                      ; endereço de memória do mapa selecionado para a CPU
+    maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
 
-    hitBoatMsg DB 10,13,'VOCE ACERTOU UM NAVIO $'
-    coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA'
+    missBoatMsg DB 10,13,'ERROU$'
+    hitBoatMsg DB 10,13,'ACERTOU UM NAVIO$'
+    coordenadaInvalidaMsg DB 10,13,'COORDENADA INVALIDA$'
+    playerTurnMsg DB 10,13,'VEZ DO JOGADOR$'
+    playerInputMsg DB 10,13,'DIGITE AS CONDENADAS DO SEU ALVO (NUMERO/LETRA): $'
+    cpuTurnMsg DB 10,13,'VEZ DA CPU$'
+    cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
 
-    playernBoats DB 1,4,3,2,2,4,4
+    delayMsg DB 10,13,'PRESS ENTER TO CONTINUE$'
 
-    cpuBoats DB 1,4,3,2,2,4,4
+    clearScreenString DB 10 DUP(10),13,'$'
 
-    eixoX DW '0','1','2','3','4','5','6','7','8','9','$'
+    playerBoats DB 4,3,2,2,4,4
+    hitBoat DB 1
+    cpuBoats DB 4,3,2,2,4,4
+    sunkShips DB 0
+
+
+    eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
     eixoY DB 'A','B','C','D','E','F','G','H','I','J'
 
-    map0 DW '~','~','~','~','~','~','~','~','~','~'
+    map0 DW '~','~','~','~','~','~','H','~','~','~'
+         DW '~','~','s','~','~','H','H','H','~','~'
+         DW '~','~','s','~','~','~','~','~','~','~'
+         DW 'h','~','~','~','~','~','~','~','~','~'
+         DW 'h','h','~','~','~','F','~','~','~','~'
+         DW 'h','~','~','~','~','F','~','~','~','~'
+         DW '~','~','~','~','~','F','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
-         DW '~','~','~','~','~','~','~','~','~','~'
+         DW '~','~','~','~','~','~','~','~','S','~'
+         DW '~','~','E','E','E','E','~','~','S','~' 
 
     map1 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','E','E','E','E','~','~','~','~','F'
@@ -114,10 +148,10 @@ ENDM
     
     map7 DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','H','~'
-         DW '~','~','E','E','E','E','~','H','H','~'
          DW '~','~','~','~','~','~','~','~','H','~'
-         DW '~','S','S','~','~','~','~','~','~','~'
          DW '~','~','~','~','F','F','F','~','~','~'
+         DW '~','~','E','E','E','E','~','H','H','~'
+         DW '~','S','S','~','~','~','~','~','~','~'
          DW '~','~','~','~','~','~','~','~','~','~'
          DW '~','s','s','~','~','~','h','~','~','~'
          DW '~','~','~','~','~','~','h','h','~','~'
@@ -146,47 +180,47 @@ ENDM
          DW '~','~','~','~','~','~','~','~','~','~'
     
 .CODE
-; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
+
 updateScreen PROC
+    ; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
+
+    pulaLinha
 
     MOV CX,10
     XOR BX,BX
     XOR DI,DI
-    MOV AH,2h
-    MOV DL,' '
-    INT 21h
-    INT 21h
+    ; o index do eixo x da matriz (numeros)
     MOV AH,9h
     LEA DX,eixoX
     INT 21h
     LEA DX,boardSpace
     INT 21h
-    MOV AH,2h
-    MOV DL,' '
-    INT 21h
-    INT 21h
-    MOV AH,9h
     LEA DX,eixoX
     INT 21h
     pulaLinha
+    ; for_loop
     REPEAT:
+        ; imprime a letra da linha correspondente
         MOV AH,2h
         MOV DL,eixoY[DI]
         INT 21h
         MOV DL,' '
         INT 21h
+        ; imprime uma linha da matriz da cpu
         MOV AH,9h
         LEA DX,playerBoard[BX]
         INT 21h
         LEA DX,boardSpace
         INT 21h
+        ; imprime a letra da linha correspondente
         MOV AH,2h
         MOV DL,eixoY[DI]
         INT 21h
         MOV DL,' '
         INT 21h
+        ; imprime uma linha da matriz do jogador
         MOV AH,9h
         LEA DX,cpuBoard[BX]      
         INT 21h
@@ -194,12 +228,14 @@ updateScreen PROC
         ADD BX,22
         INC DI
         LOOP REPEAT
-
+    ; end_for
     RET
 updateScreen ENDP
 
-; gera um número aleatório entre 0 e 9
 randomNumber PROC
+    ; gera um número aleatório entre 0 e 9
+    ; entrada: seed,multiplier,randomNum
+    ; saida: randomNum
     CALL auxRandomNumber
     ; Load the seed into AX
     MOV AX,seed
@@ -221,14 +257,38 @@ randomNumber PROC
     RET
 randomNumber ENDP
 
-; seleciona dois mapas aleatórios para o PLAYER e a CPU
+auxRandomNumber PROC
+    ; random number for multiplier
+    ; entrada: void
+    ; saida: multiplier
+    XOR CX,CX
+
+    MOV AH,0
+    INT 1ah
+
+    MOV AX,DX
+    XOR DX,DX
+    MOV BX,10
+    DIV BX
+    
+    MOV CL,DL
+    INT 21h
+
+    MOV seed,CX
+    ADD multiplier,CX
+
+    RET
+auxRandomNumber ENDP
+
 generateMaps PROC
+    ; seleciona dois mapas aleatórios para o PLAYER e a CPU
     ; entrada: randomNum, cpuMap, playerMap,maps
     ; saida: playerBoard,cpuBoard
 
     XOR BX,BX
     XOR DX,DX
 
+    ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em playerMap
     CALL randomNumber
     MOV AH,2h
     MOV DL,randomNum
@@ -239,6 +299,7 @@ generateMaps PROC
     MOV DX,maps[BX]
     MOV playerMap,DX
 
+    ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em cpuMap
     CALL randomNumber
     MOV AH,2h
     MOV DL,randomNum
@@ -249,14 +310,15 @@ generateMaps PROC
     MOV DX,maps[BX]
     MOV cpuMap,DX
 
+    ; copia os mapas selecionados em playerMap e cpuMap nas matrizes playerBoard e cpuSecret
     CALL copyPLAYERMap
     CALL copyCPUMap
 
     RET
 generateMaps ENDP
 
-; copia um mapa selecionado para o tabuleiro da CPU
 copyCPUMap PROC
+    ; copia um mapa selecionado para o tabuleiro da CPU
     ; endtrada: cpuMap
     ; saida: cpuBoard
 
@@ -271,7 +333,7 @@ copyCPUMap PROC
         XCHG BX,DI
         MOV DX,[BX][SI]
         XCHG DI,BX
-        MOV cpuBoard[BX][SI],DX
+        MOV cpuSecret[BX][SI],DX
         ADD SI,2
         CMP SI,20
         JNZ COPIAR
@@ -284,8 +346,8 @@ copyCPUMap PROC
     RET
 copyCPUMap ENDP
 
-; copia um mapa selecionado para o tabuleiro do player
 copyPLAYERMap PROC
+    ; copia um mapa selecionado para o tabuleiro do player
     ; endtrada: playerMap
     ; saida: playerBoard
 
@@ -313,8 +375,8 @@ copyPLAYERMap PROC
     RET
 copyPLAYERMap ENDP
 
-; add the maps offset to the array maps
 addMapsToArray PROC
+    ; add the maps offset to the array maps for random map selection
     ; entrada: maps,map0,map1,map2,map3,map4,map5,map6,map7,map8,map9
     ; saida: maps
 
@@ -345,147 +407,349 @@ addMapsToArray PROC
 
 addMapsToArray ENDP
 
-; random number for multiplyer
-auxRandomNumber PROC
-    XOR CX,CX
-
-    MOV AH,0
-    INT 1ah
-
-    MOV AX,DX
-    XOR DX,DX
-    MOV BX,10
-    DIV BX
-    
-    MOV CL,DL
-    INT 21h
-
-    ADD multiplier,CX
-
-    RET
-auxRandomNumber ENDP
-
 inputPlayerTarget PROC
     ; entrada: cpuSecret, cpuBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
+    MOV AH,9h
+    LEA DX,playerTurnMsg
+    INT 21h
+    DO_WHILE2:
+        MOV AH,9h
+        LEA DX,playerInputMsg
+        INT 21h
 
-    MOV AH,1h
-    INT 21h
-    AND AL,0Fh
-    MOV DL,AL
-    INT 21h
-    SUB AL,55
-    MOV DH,AL
+        MOV AH,1h
+        INT 21h
+
+        SUB AL,30H
+
+        CMP AL,9
+        JA COORDENADAINVALIDA
+
+        AND AX,000FH
+        SHL AX,1
+
+        MOV DI,AX
+
+        MOV AH,1h
+        INT 21h
+
+        SUB AL,'A'
+
+        CMP AL,9
+        JA COORDENADAINVALIDA
+        
+        MOV DL,22
+        MUL DL
+        MOV BX,AX
+
+        MOV CX,cpuSecret[BX][DI]
+        CMP CX,'X'
+        JZ DO_WHILE2
+        CMP CX,'O'
+        JZ DO_WHILE2
+        XOR DX,DX
+        MOV DX,DI
+        MOV DH,BL
 
     RET
+
+    COORDENADAINVALIDA:
+    PUSH AX
+    pulaLinha
+    MOV AH,9
+    LEA DX,coordenadaInvalidaMsg
+    INT 21h
+    pulaLinha
+    POP AX
+    JMP DO_WHILE2
 inputPlayerTarget ENDP
 
+transferSecrettoBoard PROC
+    
+    PUSH CX
+    PUSH AX
+    PUSH SI
+    PUSH BX
+
+    XOR BX,BX
+
+    NEWLINE:
+        MOV CX,10
+        XOR SI,SI
+    TRANSFER:
+        MOV AX,cpuSecret[BX][SI]
+        CMP AL,'X'
+        JZ SUBSTITUTE
+        CMP AL,'O'
+        JZ SUBSTITUTE
+
+    CONTINUE_TRANSFER:
+        ADD SI,2
+        LOOP TRANSFER
+
+        ADD BX,22
+        CMP BX,220
+        JNZ NEWLINE
+
+        POP BX
+        POP SI
+        POP AX
+        POP CX
+
+        RET
+
+    SUBSTITUTE:
+        MOV cpuBoard[BX][SI],AX
+        JMP CONTINUE_TRANSFER
+
+
+
+    RET
+
+transferSecrettoBoard ENDP    
+
+inputCpuTarget PROC
+    INPUT:
+    CALL randomNumber
+    MOV AH,2
+    MOV DL,randomNum
+    ADD DL,30h
+    INT 21h
+    MOV AL,randomNum
+    AND AX,000FH
+    SHL AX,1
+    MOV DI,AX
+
+    CALL randomNumber
+    MOV AH,2
+    MOV DL,randomNum
+    ADD DL,65
+    INT 21h
+    MOV AL,randomNum
+    AND AX,000FH
+    MOV BX,22
+    MUL BL
+    MOV BX,AX
+
+
+    
+    CMP cpuSecret[BX][DI],'O' 
+    JZ INPUT
+
+    CMP cpuSecret[BX][DI],'X' 
+    JZ INPUT
+
+    XOR DX,DX
+    MOV DX,DI
+    MOV DH,BL
+
+    RET
+inputCpuTarget ENDP
+
 verifyIftargetHit PROC
-    ; entrada: DX (coordenadas do alvo),
-    ;          BX OFFSET da matriz a ser lida (player ou cpu), 
+    ; entrada: DX (DL:x-cordenada DH: y-coordenada),
+    ;          BX OFFSET da matriz a ser lida (player ou cpu),
     ;          SI OFFSET do vetor dos barcos
     ; saida: void encreve na tela se foi acertado algum alvo
 
-    MOV AL,DH
-    MUL DL
+    XOR CX,CX
+    MOV CL,DH
+    ADD BX,CX
     AND DX,00FFh
     MOV DI,DX
-    ADD BX,AX
+    clearScreen
     MOV AH,9h
-    MOV CX,[BX][DI]
-    CMP CX,'~'
-    JZ MISS
-    CMP CX,'E'
-    JZ HITENCOURAÇADO
-    CMP CX,'F'
-    JZ HITFRAGATA
-    CMP CX,'S'
-    JZ HITSUB1
-    CMP CX,'s'
-    JZ HITSUB2
-    CMP CX,'H'
-    JZ HITHIDRO1
-    CMP CX,'h'
-    JZ HITHIDRO2
-    COORDENADAINVALIDA:
-    LEA DX,coordenadaInvalidaMsg
-    INT 21h
-    JMP EXIT5
+    ; switch (input)
+    MOV DX,[BX][DI]
+    ; case [input] = '~'
+        CMP DX,'~'
+        JZ MISS
+    ; case [input] = 'E'
+        CMP DX,'E'
+        JNZ CONTINUE1
+        DEC BYTE PTR [SI]
+        JMP HIT ; break
+    CONTINUE1:
+    ; case [input] = 'F'
+        CMP DX,'F'
+        JNZ CONTINUE2
+        DEC BYTE PTR [SI+1]
+        JMP HIT ; break
+    CONTINUE2:
+    ; case [input] = 'S'
+        CMP DX,'S'
+        JNZ CONTINUE3
+        DEC BYTE PTR [SI+2]
+        JMP HIT ; break
+    CONTINUE3:
+    ; case [input] = 's'
+        CMP DX,'s'
+        JNZ CONTINUE4
+        DEC BYTE PTR [SI+3]
+        JMP HIT ; break
+    CONTINUE4:
+    ; case [input] = 'H'
+        CMP DX,'H'
+        JNZ CONTINUE5
+        DEC BYTE PTR [SI+4]
+        JMP HIT ; break
+    CONTINUE5:
+    ; case [input] = 'h'
+        CMP DX,'h'
+        JNZ CONTINUE6
+        DEC BYTE PTR [SI+5]
+        JMP HIT ; break
+    CONTINUE6:
+    ; default: coordenadaInválida 
+        LEA DX,coordenadaInvalidaMsg
+        INT 21h
+        pulaLinha
+        JMP EXIT5
+    ; end_switch
 
-    HITENCOURAÇADO:
-    DEC BYTE PTR [SI+1]
-    JMP HIT
-    HITFRAGATA:
-    DEC BYTE PTR [SI+2]
-    JMP HIT
-    HITSUB1:
-    DEC BYTE PTR [SI+3]
-    JMP HIT
-    HITSUB2:
-    DEC BYTE PTR [SI+4]
-    JMP HIT
-    HITHIDRO1:
-    DEC BYTE PTR [SI+5]
-    JMP HIT
-    HITHIDRO2:
-    DEC BYTE PTR [SI+6]
+    ; if hit
     HIT:
-    LEA DX,hitBoatMsg
-    INT 21h
-    MOV CX,'X'
-    JMP EXIT5
+        MOV DX,'X'
+        MOV [BX][DI],DX
+        CALL transferSecrettoBoard
+        CALL updateScreen
+        LEA DX,hitBoatMsg
+        INT 21h
+        pulaLinha
+        JMP EXIT5
+    ; else if miss
     MISS:
-    DEC BYTE PTR [SI]
-    MOV CX,'O'
+        MOV DX,'O'
+        MOV [BX][DI],DX
+        CALL transferSecrettoBoard
+        CALL updateScreen
+        LEA DX,missBoatMsg
+        INT 21h
+        DEC BYTE PTR hitBoat
+    ; else
     EXIT5:
     RET
 verifyIftargetHit ENDP
 
+verifyPlayerSunkships PROC
+    
+    PUSH AX
+    PUSH SI
+
+    XOR SI,SI
+
+    COMPARE:
+        MOV AL,playerBoats[SI]
+        CMP AL,0
+        JNZ CONTINUA
+        INC BYTE PTR sunkShips
+    
+    CONTINUA:
+        CMP BYTE PTR sunkShips,6
+        JAE GAMEOVER
+        CMP SI,5
+        JAE ENDING
+        
+        
+        INC SI
+        JMP COMPARE
+
+    ENDING:
+        MOV BYTE PTR sunkShips,0
+        POP SI
+        POP AX
+        RET  
+
+    GAMEOVER:
+        clearScreen
+        CALL updateScreen
+        MOV AH,4ch
+        INT 21H
+    
+
+verifyPlayerSunkships ENDP
+
+verifyCPUSunkships PROC
+    
+    PUSH AX
+    PUSH SI
+
+    XOR SI,SI
+
+    COMPARE_CPU:
+        MOV AL,BYTE PTR cpuBoats[SI]
+        CMP AL,0
+        JNZ CONTINUA_CPU
+        INC BYTE PTR sunkShips
+    
+    CONTINUA_CPU:
+        CMP BYTE PTR sunkShips,6
+        JAE GAMEOVER_CPU
+        CMP SI,5
+        JAE ENDING_CPU
+        
+        INC SI
+        JMP COMPARE_CPU
+
+    ENDING_CPU:
+        MOV BYTE PTR sunkShips,0
+        POP SI
+        POP AX
+        RET 
+
+    GAMEOVER_CPU:
+        MOV AH,4ch
+        INT 21h
+
+
+verifyCPUSunkships ENDP
+
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
+; code_overview
 
-; test code
     CALL addMapsToArray
     CALL generateMaps
     pulaLinha
-
     CALL updateScreen
+        PLAYER_REPEAT:
+                CALL inputPlayerTarget
+                LEA BX,cpuSecret
+                LEA SI,cpuBoats
+                CALL verifyIftargetHit
+                CALL verifyCPUSunkships
+            MOV CL,hitBoat
+            OR CL,CL
+            JNZ PLAYER_REPEAT
+            clearScreen
+            CALL updateScreen
+            delay
+            
 
+            INC BYTE PTR hitBoat
+        CPU_REPEAT:
+            clearScreen
+            CALL updateScreen
+            MOV AH,9h
+            LEA DX,cpuTurnMsg
+            INT 21h
+            LEA DX,cpuInputMsg
+            INT 21h
+                CALL inputCpuTarget
+                LEA BX,playerBoard
+                LEA SI,playerBoats
+                CALL verifyIftargetHit
+                CALL verifyPlayerSunkships
+                CALL updateScreen
+                delay
+            MOV CL,hitBoat
+            OR CL,CL
+            JNZ CPU_REPEAT            
 
-
-    
-; end test code
-; code_overview
-
-    ; gerarMapas
-
-    ; REPEAT
-    ;     updateScreen
-        
-    ;     REPEAT
-    ;         selecionaAlvo
-
-    ;         verificaAcerto
-
-    ;         updateMatrix
-
-    ;         updateScreen
-    ;     UNTIL TIRO = ERRO
-
-    ;     REPEAT
-    ;         selecionaAlvoAleatorio
-
-    ;         verificaAcerto
-
-    ;         updateMatrix
-
-    ;         updateScreen
-    ;     UNTIL TIRO = ERRO
-    ; UNTIL ALL BOATS OF ONE OF THE PLAYER HAVE SINKEN
-
-    ; endScreen
-;  end code_overview
+            INC BYTE PTR hitBoat
+        JMP PLAYER_REPEAT
 
     MOV AH,4ch
     INT 21h

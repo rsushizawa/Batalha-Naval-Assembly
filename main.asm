@@ -14,6 +14,8 @@ pulaLinha MACRO
     POP AX
 ENDM
 delay MACRO
+    LOCAL PRINTF
+    PRINTF:
     PUSH AX
     PUSH DX
     MOV AH,9
@@ -23,6 +25,34 @@ delay MACRO
     INT 21h
     POP DX
     POP AX
+ENDM
+
+imprime_string MACRO string
+    LOCAL PRINTF
+    PUSH SI
+    PUSH AX
+    PUSH DX
+    PUSH CX
+
+    MOV CX,6
+    LEA SI,string
+    
+PRINTF:
+        MOV AH,2
+
+        MOV DL,[SI]
+        ADD DL,'0'
+        INT 21H
+        MOV DL,' '
+        INT 21H
+        INC SI
+        LOOP PRINTF
+
+    POP CX
+    POP DX
+    POP AX
+    POP SI
+    
 ENDM
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
@@ -621,6 +651,8 @@ verifyPlayerSunkships PROC
 
     XOR SI,SI
 
+    imprime_string playerBoats
+
     COMPARE:
         MOV AL,playerBoats[SI]
         CMP AL,0
@@ -628,12 +660,13 @@ verifyPlayerSunkships PROC
         INC BYTE PTR sunkShips
     
     CONTINUA:
-        INC SI
-        CMP SI,5
-        JZ ENDING
-        
         CMP BYTE PTR sunkShips,6
-        JZ GAMEOVER
+        JAE GAMEOVER
+        CMP SI,5
+        JAE ENDING
+        
+        
+        INC SI
         JMP COMPARE
 
     ENDING:
@@ -643,6 +676,7 @@ verifyPlayerSunkships PROC
         RET  
 
     GAMEOVER:
+        CALL updateScreen
         MOV AH,4ch
         INT 21H
     
@@ -656,19 +690,22 @@ verifyCPUSunkships PROC
 
     XOR SI,SI
 
+    imprime_string cpuBoats
+
     COMPARE_CPU:
-        MOV AL,cpuBoats[SI]
+        MOV AL,BYTE PTR cpuBoats[SI]
         CMP AL,0
         JNZ CONTINUA_CPU
         INC BYTE PTR sunkShips
     
     CONTINUA_CPU:
-        INC SI
-        CMP SI,5
-        JZ ENDING
         CMP BYTE PTR sunkShips,6
-        JZ GAMEOVER_CPU
-        JMP COMPARE
+        JAE GAMEOVER_CPU
+        CMP SI,5
+        JAE ENDING_CPU
+        
+        INC SI
+        JMP COMPARE_CPU
 
     ENDING_CPU:
         MOV BYTE PTR sunkShips,0
@@ -677,6 +714,7 @@ verifyCPUSunkships PROC
         RET 
 
     GAMEOVER_CPU:
+        imprime_string cpuBoats
         MOV AH,4ch
         INT 21h
 
@@ -697,16 +735,15 @@ MAIN PROC
                 LEA BX,cpuBoard
                 LEA SI,cpuBoats
                 CALL verifyIftargetHit
+                CALL verifyCPUSunkships
                 CALL transferSecrettoBoard    
-                CALL updateScreen
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
             delay
-            CALL verifyCPUSunkships
+            
 
             INC BYTE PTR hitBoat
-
         CPU_REPEAT:
             CALL updateScreen
             MOV AH,9h
@@ -719,12 +756,12 @@ MAIN PROC
                 LEA BX,playerBoard
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
-                CALL updateScreen
+                CALL verifyPlayerSunkships
                 delay
             MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT
-            CALL verifyPlayerSunkships
+            
 
             INC BYTE PTR hitBoat
 

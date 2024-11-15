@@ -1,7 +1,8 @@
 .MODEL SMALL 
 .STACK 100h
 ; macro de pulara 1 linha
-clearScreen MACRO 
+clearScreen MACRO
+    ; macro para "limpar" a tela 
     PUSH AX
     PUSH DX
     MOV AH,9
@@ -11,6 +12,7 @@ clearScreen MACRO
     POP AX
 ENDM
 pulaLinha MACRO
+    ; macro para pular uma linha
     PUSH AX
     PUSH DX
         MOV AH,2h
@@ -33,7 +35,7 @@ ENDM
     randomNum DB 0                                                   ; Storage for random number between 0 and 9
     playerMap DW ?                                                   ; endereço de memória do mapa selecionado para o player
     cpuMap DW ?                                                      ; endereço de memória do mapa selecionado para a CPU
-    maps DW 10 DUP(?)                                                ; vetor de endereços dos mapas
+    maps DW OFFSET map0, OFFSET map1, OFFSET map2, OFFSET map3, OFFSET map4, OFFSET map5, OFFSET map6, OFFSET map7, OFFSET map8, OFFSET map9                                                ; vetor de endereços dos mapas
 
     missBoatMsg DB 10,13,'ACERTOU AGUA$'
     hitBoatMsg DB 10,13,'ACERTOU UM NAVIO$'
@@ -178,6 +180,7 @@ ENDM
     
 .CODE
 delay PROC
+    ; delay para adicionar um intervalo de espera entre , principalmente as chamadas do procedimento de gerar números aleatórios (randomNumber)
     MOV CX,60000
     DELAY_LOOP:
         MOV CX,CX
@@ -186,7 +189,7 @@ delay PROC
 delay ENDP
 
 updateScreen PROC
-    ; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
+    ; imprime na tela os tabuleiros (matrizes) do player e da CPU
     ; entrada: PLAYERBOARD, CPUBOARD, BOARDSPACE
     ; saida: void
 
@@ -237,45 +240,25 @@ updateScreen PROC
 updateScreen ENDP
 
 randomNumber PROC
-    ; gera um número aleatório entre 0 e 9
+    ; Implementa um gerador linear congruente (LCG) para gerar números aleatórios entre 0 e 9
     ; entrada: seed,multiplier,randomNum
     ; saida: randomNum
-
-    CALL delay
-    XOR CX,CX
-
-    MOV AH,0
-    INT 1ah
-
-    MOV AX,DX
-    XOR DX,DX
-    MOV BX,10
-    DIV BX
-    
-    MOV CL,DL
-    INT 21h
-
-    ADD seed,CX
-
-    MOV CX,10
-
-    MOV AX,seed             ; Carrega a semente atual
-
-    MOV BX,13               ; Multiplicador primo
-    MUL BX                   ; AX = AX * BX (resultado em DX:AX)
-
-    MOV seed,AX             ; Atualiza a semente para próximo uso
-
-    XOR DX,DX               ; Limpa DX para a divisão
-    DIV CX                   ; AX = AX / CX, resto em DX
-
-    MOV randomNum,DL               ; Coloca o resto em randomNum (0 <= randomNum < CX)
-
-    RET
+    CALL delay       ; Chama a função delay para sincronização.
+    XOR CX,CX        ; Zera o registrador CX.
+    MOV AH,0         ; Configura a função para obter o tempo do sistema (INT 1Ah).
+    INT 1ah          ; Obtém o tempo atual do sistema e armazena em DX.
+    MOV AX,DX        ; Copia o tempo do sistema para AX.
+    XOR DX,DX        ; Zera o registrador DX.
+    MOV BX,10        ; Configura o divisor como 10.
+    DIV BX           ; Divide AX por BX, o resto (0-9) é armazenado em DL.
+    MOV CL,DL        ; Move o número gerado para CL.
+    ADD seed,CX      ; Atualiza a semente com o número gerado.
+    MOV randomNum,CL ; Armazena o número gerado em randomNum.
+    RET              ; Retorna da função.
 randomNumber ENDP
 
 generateMaps PROC
-    ; seleciona dois mapas aleatórios para o PLAYER e a CPU
+    ; Seleciona aleatoriamente os mapas para jogador e CPU a partir de um array de mapas pré-definidos.
     ; entrada: randomNum, cpuMap, playerMap,maps
     ; saida: playerBoard,cpuBoard
 
@@ -284,27 +267,16 @@ generateMaps PROC
 
     ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em playerMap
     CALL randomNumber
-CALL delay
-    MOV AH,2h
-    MOV DL,randomNum
-    OR DL,30h
-    INT 21h   
     MOV BL,randomNum
     SHL BX,1
     MOV DX,maps[BX]
     MOV playerMap,DX
-CALL delay
     ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em cpuMap
     CALL randomNumber
-    MOV AH,2h
-    MOV DL,randomNum
-    OR DL,30h
-    INT 21h   
     MOV BL,randomNum
     SHL BX,1
     MOV DX,maps[BX]
     MOV cpuMap,DX
-CALL delay
     ; copia os mapas selecionados em playerMap e cpuMap nas matrizes playerBoard e cpuSecret
     CALL copyPLAYERMap
     CALL copyCPUMap
@@ -313,7 +285,7 @@ CALL delay
 generateMaps ENDP
 
 copyCPUMap PROC
-    ; copia um mapa selecionado para o tabuleiro da CPU
+    ;  Copia o mapa selecionado para cpuSecret
     ; endtrada: cpuMap
     ; saida: cpuBoard
 
@@ -342,7 +314,7 @@ copyCPUMap PROC
 copyCPUMap ENDP
 
 copyPLAYERMap PROC
-    ; copia um mapa selecionado para o tabuleiro do player
+    ; Copia o mapa selecionado para a matriz playerBoard
     ; endtrada: playerMap
     ; saida: playerBoard
 
@@ -370,40 +342,9 @@ copyPLAYERMap PROC
     RET
 copyPLAYERMap ENDP
 
-addMapsToArray PROC
-    ; add the maps offset to the array maps for random map selection
-    ; entrada: maps,map0,map1,map2,map3,map4,map5,map6,map7,map8,map9
-    ; saida: maps
-
-    XOR DX,DX
-
-    LEA DX,map0
-    MOV maps[0],DX
-    LEA DX,map1
-    MOV maps[2],DX
-    LEA DX,map2
-    MOV maps[4],DX
-    LEA DX,map3
-    MOV maps[6],DX
-    LEA DX,map4
-    MOV maps[8],DX
-    LEA DX,map5
-    MOV maps[10],DX
-    LEA DX,map6
-    MOV maps[12],DX
-    LEA DX,map7
-    MOV maps[14],DX
-    LEA DX,map8
-    MOV maps[16],DX
-    LEA DX,map9
-    MOV maps[18],DX
-
-    RET
-
-addMapsToArray ENDP
-
 inputPlayerTarget PROC
-    ; entrada: cpuSecret, cpuBoard
+    ; input das coordenadas do alvo do player 
+    ; entrada: playerTurnMsg, playerBoard
     ; saida: DX (DL:x-cordenada DH: y-coordenada)
     MOV AH,9h
     LEA DX,playerTurnMsg
@@ -461,6 +402,9 @@ inputPlayerTarget PROC
 inputPlayerTarget ENDP
 
 transferSecrettoBoard PROC
+    ; transfere os O e X da matriz cpuSecret para a matriz cpuBoard
+    ; entrada: cpuSecret
+    ; saida: cpuBoard
     
     PUSH CX
     PUSH AX
@@ -505,6 +449,10 @@ transferSecrettoBoard PROC
 transferSecrettoBoard ENDP    
 
 inputCpuTarget PROC
+    ; gera um alvo válido para a cpu
+    ; entrada: cpuTurnMsg, randomNum, cpuSecret, cpuTarget
+    ; saida: DX (DL:x-cordenada DH: y-coordenada)
+
     MOV AH,9h
     LEA DX,cpuTurnMsg
     INT 21h
@@ -555,7 +503,7 @@ verifyIftargetHit PROC
     ; entrada: DX (DL:x-cordenada DH: y-coordenada),
     ;          BX OFFSET da matriz a ser lida (player ou cpu),
     ;          SI OFFSET do vetor dos barcos
-    ; saida: void encreve na tela se foi acertado algum alvo
+    ; saida: void encreve na tela se foi acertado algum alvo e atualiza a tela
 
     XOR CX,CX
     MOV CL,DH
@@ -636,6 +584,9 @@ verifyIftargetHit PROC
 verifyIftargetHit ENDP
 
 verifyPlayerSunkships PROC
+    ; verifica se todos os návios da PLAYER naufragaram. Se um návio tiver afundado é exibido uma menssagem boatSunken. Se todos os návio tiverem afundado é exibido uma menssagem de derrota e o jogo é terminado
+    ; entrada: playerBoats, sunkShips, cplayerBoatsSunken
+    ; saida: playerBoatsSunken
     
     PUSH AX
     PUSH SI
@@ -684,6 +635,9 @@ verifyPlayerSunkships PROC
 verifyPlayerSunkships ENDP
 
 verifyCPUSunkships PROC
+    ; verifica se todos os návios da CPU naufragaram. Se um návio tiver afundado é exibido uma menssagem boatSunken. Se todos os návio tiverem afundado é exibido uma menssagem de vitória e o jogo é terminado
+    ; entrada: cpuBoats, sunkShips, cpuBoatsSunken
+    ; saida: cpuBoatsSunken
     
     PUSH AX
     PUSH SI
@@ -728,6 +682,9 @@ verifyCPUSunkships PROC
 verifyCPUSunkships ENDP
 
 continueGame PROC
+    ; pausa o jogo e dá a opção do jogador continuar ou sair do jogo
+    ; entrada: delayMsg
+    ; saida: void
     PRINTF:
     PUSH AX
     PUSH DX
@@ -747,6 +704,9 @@ continueGame PROC
 continueGame ENDP
 
 MENU_SCREEN PROC
+    ; imprime o menu inicial do jogo
+    ; entrada: MENU_SCREEN1,MENU_SCREEN2,MENU_SCREEN3,MENU_SCREEN4
+    ; saida: void
 
     MOV AH,9h
     LEA DX,MENU_SCREEN1
@@ -768,45 +728,48 @@ MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
 ; code_overview
-    CALL MENU_SCREEN
+    CALL MENU_SCREEN                        ; exibe a tela inicial
     CALL delay
-    CALL addMapsToArray
-    CALL delay
-    CALL generateMaps
+    CALL generateMaps                       ; gera mapas aleatórios para o player e a cpu
     CALL delay
     pulaLinha
-    CALL updateScreen
+    CALL updateScreen                       ; imprime as matrizes na tela
+    ;while !(todos os návios do player ou da cpu naufragaram)
+    MAIN_LOOP:
+        ; while player não errar
         PLAYER_REPEAT:
-                CALL inputPlayerTarget
-                LEA BX,cpuSecret
+                CALL inputPlayerTarget      ; input das coordenadas do alvo
+                LEA BX,cpuSecret            
                 LEA SI,cpuBoats
                 clearScreen
-                CALL verifyIftargetHit
-                CALL verifyCPUSunkships
+                CALL verifyIftargetHit      ; verifica se o player acertou um návio
+                CALL verifyCPUSunkships     ; verifica se o player afundou um návio da cpu e se ele afundou todos os návios do player
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
-            CALL continueGame
+        ; end_while
+            CALL continueGame                ; pausa o jogo e pergunta se o jogador quer continuar ou sair do jogo
 
-            INC BYTE PTR hitBoat
+            INC BYTE PTR hitBoat             ; reseta o contador dos tiros
             clearScreen
-            CALL updateScreen
+            CALL updateScreen                ; imprime as matrizes na tela
             clearScreen
+        ; while cpu não errar
         CPU_REPEAT:
-                CALL inputCpuTarget
+                CALL inputCpuTarget          ; input das coordenadas do alvo da cpu
                 LEA BX,playerBoard
                 LEA SI,playerBoats
-                CALL verifyIftargetHit
-                CALL verifyPlayerSunkships
-                CALL continueGame
+                CALL verifyIftargetHit       ; verifica se a cpu acertou um návio
+                CALL verifyPlayerSunkships   ; verifica se a cpu afundou um návio do player e se ele afundou todos os návios do player
+                CALL continueGame            ; pausa o jogo e pergunta se o jogador quer continuar ou sair do jogo
             MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT
+        ; end_while
             clearScreen       
-            clearScreen
-            CALL updateScreen
-            CALL continueGame
-            INC BYTE PTR hitBoat
+            CALL updateScreen                 ; imprime as matrizes na tela
+            CALL continueGame                 ; pausa o jogo e pergunta se o jogador quer continuar ou sair do jogo
+            INC BYTE PTR hitBoat              ; reseta o contador dos tiros
         JMP PLAYER_REPEAT
 
     MOV AH,4ch

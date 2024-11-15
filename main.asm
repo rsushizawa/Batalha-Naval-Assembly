@@ -46,7 +46,7 @@ ENDM
 
     delayMsg DB 10,13,'PRESS ENTER TO CONTINUE OR ESC TO EXIT THE GAME$'
 
-    clearScreenString DB 10 DUP(10),13,'$'
+    clearScreenString DB 20 DUP(10),13,'$'
 
     playerBoats DB 4,3,2,2,4,4
     playerBoatsSunken DB 0
@@ -56,10 +56,10 @@ ENDM
     cpuTarget DB ?,?
     sunkShips DB 0
 
-    MENU_SCREEN1 DB 10,13,' ___   _ _____ _   _    _  _   _     _  _   ___   ___   _    $'
-    MENU_SCREEN2 DB 10,13,'| _ ) /_\_   _/_\ | |  | || | /_\   | \| | /_\ \ / /_\ | |   $'
-    MENU_SCREEN3 DB 10,13,'| _ \/ _ \| |/ _ \| |__| __ |/ _ \  | .` |/ _ \ V / _ \| |__ $'
-    MENU_SCREEN4 DB 10,13,'|___/_/ \_\_/_/ \_\____|_||_/_/ \_\ |_|\_/_/ \_\_/_/ \_\____|',10,13,'$'
+    MENU_SCREEN1 DB 10,10,10,10,10,10,10,10,10,13,10 DUP(' '),' ___   _ _____ _   _    _  _   _     _  _   ___   ___   _    $'
+    MENU_SCREEN2 DB 10,13,10 DUP(' '),'| _ ) /_\_   _/_\ | |  | || | /_\   | \| | /_\ \ / /_\ | |   $'
+    MENU_SCREEN3 DB 10,13,10 DUP(' '),'| _ \/ _ \| |/ _ \| |__| __ |/ _ \  | .` |/ _ \ V / _ \| |__ $'
+    MENU_SCREEN4 DB 10,13,10 DUP(' '),'|___/_/ \_\_/_/ \_\____|_||_/_/ \_\ |_|\_/_/ \_\_/_/ \_\____|',10,10,10,10,10,10,10,10,10,10,10,13,'$'
                                                               
 
 
@@ -759,6 +759,7 @@ MENU_SCREEN PROC
     INT 21h
 
     CALL continueGame
+    clearScreen
 
     RET
 MENU_SCREEN ENDP

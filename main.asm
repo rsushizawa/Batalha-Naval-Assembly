@@ -22,19 +22,6 @@ pulaLinha MACRO
     POP DX
     POP AX
 ENDM
-delay MACRO
-    LOCAL PRINTF
-    PRINTF:
-    PUSH AX
-    PUSH DX
-    MOV AH,9
-    LEA DX,delayMsg
-    INT 21h
-    MOV AH,1
-    INT 21h
-    POP DX
-    POP AX
-ENDM
 
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
@@ -57,7 +44,7 @@ ENDM
     cpuTurnMsg DB 10,13,'VEZ DA CPU$'
     cpuInputMsg DB 10,13,'COORDENADAS ALVO DA CPU: $'
 
-    delayMsg DB 10,13,'PRESS ENTER TO CONTINUE$'
+    delayMsg DB 10,13,'PRESS ENTER TO CONTINUE OR ESC TO EXIT THE GAME$'
 
     clearScreenString DB 10 DUP(10),13,'$'
 
@@ -68,6 +55,12 @@ ENDM
     cpuBoatsSunken DB 0
     cpuTarget DB ?,?
     sunkShips DB 0
+
+    MENU_SCREEN1 DB 10,13,' ___   _ _____ _   _    _  _   _     _  _   ___   ___   _    $'
+    MENU_SCREEN2 DB 10,13,'| _ ) /_\_   _/_\ | |  | || | /_\   | \| | /_\ \ / /_\ | |   $'
+    MENU_SCREEN3 DB 10,13,'| _ \/ _ \| |/ _ \| |__| __ |/ _ \  | .` |/ _ \ V / _ \| |__ $'
+    MENU_SCREEN4 DB 10,13,'|___/_/ \_\_/_/ \_\____|_||_/_/ \_\ |_|\_/_/ \_\_/_/ \_\____|',10,13,'$'
+                                                              
 
 
     eixoX DW '  ','0','1','2','3','4','5','6','7','8','9','$'
@@ -184,6 +177,13 @@ ENDM
          DW '~','~','~','~','~','~','~','~','~','~'
     
 .CODE
+delay PROC
+    MOV CX,60000
+    DELAY_LOOP:
+        MOV CX,CX
+        LOOP DELAY_LOOP
+    RET
+delay ENDP
 
 updateScreen PROC
     ; updates the screen with the current matrizes of the PLAYERBOARD and CPUBOARD
@@ -240,31 +240,8 @@ randomNumber PROC
     ; gera um número aleatório entre 0 e 9
     ; entrada: seed,multiplier,randomNum
     ; saida: randomNum
-    CALL auxRandomNumber
-    ; Load the seed into AX
-    MOV AX,seed
-    ; Load the multiplier into BX
-    MOV BX,multiplier
-    ; Multiply AX by BX (result in DX:AX)
-    MUL BX
-    ; Add the increment
-    ADD AL,12
-    ; Update the seed with the new value
-    MOV seed,AX
 
-    ; Limit the result to 0-9 by performing modulo 10
-    XOR DX,DX               ; Clear DX for DIV operation
-    MOV BX,10               ; Set divisor to 10
-    DIV BX                    ; AX / 10, remainder in DX
-    MOV randomNum,DL      ; Store the result (0-9) in randomNumber
-
-    RET
-randomNumber ENDP
-
-auxRandomNumber PROC
-    ; random number for multiplier
-    ; entrada: void
-    ; saida: multiplier
+    CALL delay
     XOR CX,CX
 
     MOV AH,0
@@ -278,11 +255,24 @@ auxRandomNumber PROC
     MOV CL,DL
     INT 21h
 
-    MOV seed,CX
-    ADD multiplier,CX
+    ADD seed,CX
+
+    MOV CX,10
+
+    MOV AX,seed             ; Carrega a semente atual
+
+    MOV BX,13               ; Multiplicador primo
+    MUL BX                   ; AX = AX * BX (resultado em DX:AX)
+
+    MOV seed,AX             ; Atualiza a semente para próximo uso
+
+    XOR DX,DX               ; Limpa DX para a divisão
+    DIV CX                   ; AX = AX / CX, resto em DX
+
+    MOV randomNum,DL               ; Coloca o resto em randomNum (0 <= randomNum < CX)
 
     RET
-auxRandomNumber ENDP
+randomNumber ENDP
 
 generateMaps PROC
     ; seleciona dois mapas aleatórios para o PLAYER e a CPU
@@ -294,6 +284,7 @@ generateMaps PROC
 
     ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em playerMap
     CALL randomNumber
+CALL delay
     MOV AH,2h
     MOV DL,randomNum
     OR DL,30h
@@ -302,7 +293,7 @@ generateMaps PROC
     SHL BX,1
     MOV DX,maps[BX]
     MOV playerMap,DX
-
+CALL delay
     ; gera um numero aleatório entre 0-9 e então pega o mapa com o index correpondente no vetor maps e coloca o endereço de memória da matriz do mapa selecionádo em cpuMap
     CALL randomNumber
     MOV AH,2h
@@ -313,7 +304,7 @@ generateMaps PROC
     SHL BX,1
     MOV DX,maps[BX]
     MOV cpuMap,DX
-
+CALL delay
     ; copia os mapas selecionados em playerMap e cpuMap nas matrizes playerBoard e cpuSecret
     CALL copyPLAYERMap
     CALL copyCPUMap
@@ -522,14 +513,14 @@ inputCpuTarget PROC
     INPUT:
     CALL randomNumber
     MOV AL,randomNum
-    MOV BYTE PTR cpuTarget[0],AL
+    MOV cpuTarget[0],AL
     AND AX,000FH
     SHL AX,1
     MOV DI,AX
 
     CALL randomNumber
     MOV AL,randomNum
-    MOV BYTE PTR cpuTarget[1],AL
+    MOV cpuTarget[1],AL
     AND AX,000FH
     MOV BX,22
     MUL BL
@@ -736,21 +727,56 @@ verifyCPUSunkships PROC
 
 verifyCPUSunkships ENDP
 
+continueGame PROC
+    PRINTF:
+    PUSH AX
+    PUSH DX
+    MOV AH,9
+    LEA DX,delayMsg
+    INT 21h
+    MOV AH,1
+    INT 21h
+    CMP AL,1Bh
+    JNZ EXIT6
+    MOV AH,4ch
+    INT 21h
+    EXIT6: 
+    POP DX
+    POP AX
+    RET
+continueGame ENDP
+
+MENU_SCREEN PROC
+
+    MOV AH,9h
+    LEA DX,MENU_SCREEN1
+    INT 21h
+    LEA DX,MENU_SCREEN2
+    INT 21h
+    LEA DX,MENU_SCREEN3
+    INT 21h
+    LEA DX,MENU_SCREEN4
+    INT 21h
+
+    CALL continueGame
+
+    RET
+MENU_SCREEN ENDP
+
 MAIN PROC
     MOV AX,@DATA
     MOV DS,AX
 ; code_overview
-
+    CALL MENU_SCREEN
+    CALL delay
     CALL addMapsToArray
+    CALL delay
     CALL generateMaps
+    CALL delay
     pulaLinha
     CALL updateScreen
         PLAYER_REPEAT:
                 CALL inputPlayerTarget
-                PUSH AX
-                MOV AH,1
-                INT 21h
-                POP AX
                 LEA BX,cpuSecret
                 LEA SI,cpuBoats
                 clearScreen
@@ -759,8 +785,7 @@ MAIN PROC
             MOV CL,hitBoat
             OR CL,CL
             JNZ PLAYER_REPEAT
-            delay
-            
+            CALL continueGame
 
             INC BYTE PTR hitBoat
             clearScreen
@@ -772,13 +797,14 @@ MAIN PROC
                 LEA SI,playerBoats
                 CALL verifyIftargetHit
                 CALL verifyPlayerSunkships
-                delay
+                CALL continueGame
             MOV CL,hitBoat
             OR CL,CL
             JNZ CPU_REPEAT
             clearScreen       
             clearScreen
             CALL updateScreen
+            CALL continueGame
             INC BYTE PTR hitBoat
         JMP PLAYER_REPEAT
 

@@ -190,11 +190,21 @@ delay ENDP
 
 ;entrada: DI (playerBoard ou CPUBoard)
 randomizeShips PROC
-    MOV CX,6
+    
+    MOV CX,0006
+
     ALEATORIZAR_POSICAO:
         CALL randomNumber
+
         MOV DL,randomNum
         
+
+        
+        
+        
+        CMP DL,6
+        JA ALEATORIZAR_POSICAO
+        JZ PLACE6
 
         CMP DL,5
         JZ PLACE5
@@ -202,81 +212,57 @@ randomizeShips PROC
         CMP DL,4
         JZ PLACE4
 
-        CMP DL,6
-        JZ PLACE6_CHECKPOINT
-
         CMP DL,3
         JZ PLACE3
 
         CMP DL,2
         JZ PLACE2    
 
-        CMP DL,1
-        JZ PLACE1
 
-        JMP ALEATORIZAR_POSICAO
-
-        PLACE1:
         MOV BX,22
         XOR DI,DI
-        CMP WORD PTR[BX][DI],'~'
-        JNZ ALEATORIZAR_POSICAO
-        CALL placeShips
-        LOOP ALEATORIZAR_POSICAO
-        RET
+
+        JMP PLACESHIP_END
 
         PLACE2:
             MOV BX,22
             MOV DI,12
-            CMP WORD PTR[BX][DI],'~'
-            JNZ ALEATORIZAR_POSICAO
-            CALL placeShips
-            LOOP ALEATORIZAR_POSICAO
-            RET
+            JMP PLACESHIP_END
 
         PLACE3:
             MOV BX,154
             XOR DI,DI
-            CMP WORD PTR[BX][DI],'~'
-            JNZ ALEATORIZAR_POSICAO
-            CALL placeShips
-            LOOP ALEATORIZAR_POSICAO
-            RET
+            JMP PLACESHIP_END
 
-        PLACE6_CHECKPOINT:
-            JMP PLACE6
         PLACE4:
             MOV BX,154
             MOV DI,12
-            CMP WORD PTR[BX][DI],'~'
-            JNZ ALEATORIZAR_POSICAO
-            CALL placeShips
-            LOOP ALEATORIZAR_POSICAO
-            RET
+            JMP PLACESHIP_END
         
         PLACE5:
             MOV BX,88
             MOV DI,6
-            CMP WORD PTR[BX][DI],'~'
-            JNZ ALEATORIZAR_POSICAO
-            CALL placeShips
-            LOOP ALEATORIZAR_POSICAO
-            RET
+            JMP PLACESHIP_END
         PLACE6:
             MOV BX,88
             MOV DI,18
-            CMP WORD PTR[BX][DI],'~'
-            JNZ ALEATORIZAR_POSICAO
+            JMP PLACESHIP_END
+
+        PLACESHIP_END:
+            CMP WORD PTR [BX][DI],'~'
+            JNE VERIFY_COUNTER
             CALL placeShips
             LOOP ALEATORIZAR_POSICAO
+
+        VERIFY_COUNTER:
+            CMP CX,0
+            JNZ ALEATORIZAR_POSICAO
             RET
 
 randomizeShips ENDP
 
 ;entrada: BX e DI (playerBoat ou CPUBoat)
 placeShips PROC
-
-    
     CMP CX,6
     JZ PLACE_ENCOURACADO
     CMP CX,5
@@ -291,6 +277,8 @@ placeShips PROC
     CMP DL,4
     JA OUTROSENTIDO_HIDROAVIAO
     MOV WORD PTR [BX][DI+2],'H'
+
+    RET
             
 
     OUTROSENTIDO_HIDROAVIAO:
@@ -396,7 +384,7 @@ updateScreen PROC
         INT 21h
         ; imprime uma linha da matriz do jogador
         MOV AH,9h
-        LEA DX,cpuBoard[BX]      
+        LEA DX,cpuSecret[BX]      
         INT 21h
         pulaLinha
         ADD BX,22

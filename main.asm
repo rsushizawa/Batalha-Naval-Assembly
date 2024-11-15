@@ -768,7 +768,6 @@ MAIN PROC
         ; end_while
             clearScreen       
             CALL updateScreen                 ; imprime as matrizes na tela
-            CALL continueGame                 ; pausa o jogo e pergunta se o jogador quer continuar ou sair do jogo
             INC BYTE PTR hitBoat              ; reseta o contador dos tiros
         JMP PLAYER_REPEAT
 

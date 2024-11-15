@@ -25,6 +25,17 @@ pulaLinha MACRO
     POP AX
 ENDM
 
+imprimeString MACRO string
+    PUSH AX
+    PUSH DX
+    MOV AH,9
+    LEA DX,string
+    INT 21H
+
+    POP DX
+    POP AX
+ENDM
+
 .DATA
     playerBoard DW 10 DUP( 10 DUP('~'),'$')                          ; tabuleiro do jogador
     cpuBoard DW 10 DUP( 10 DUP('~'),'$')                             ; tabuleiro da CPU que é exibido na tela
@@ -57,6 +68,17 @@ ENDM
     cpuBoatsSunken DB 0
     cpuTarget DB ?,?
     sunkShips DB 0
+
+    victoryString1 DB 10,13, 60 DUP ('~'),'$'
+    victoryString2 DB 10,13, 60 DUP ('-'),'$'
+    victoryText1 DB 10,13,11 DUP ('.'),' __   _____ ___ _____ ___  _____   __',11 DUP ('.'),'$'
+    victoryText2 DB 10,13,11 DUP ('.'),' \ \ / /_ _/ __|_   _/ _ \| _ \ \ / /',11 DUP ('.'),'$'
+    victoryText3 DB 10,13,11 DUP ('.'),'  \ V / | | (__  | || (_) |   /\ V / ',11 DUP ('.'),'$'
+    victoryText4 DB 10,13,11 DUP ('.'),'   \_/ |___\___| |_| \___/|_|_\ |_|  ',11 DUP ('.'),'$'
+    defeatText1 DB 10,13,15 DUP ('.'),'   ___  ___ ___ ___   _ _____ ',15 DUP ('.'),'$'
+    defeatText2 DB 10,13,15 DUP ('.'),'  |   \| __| __| __| /_\_   _|',15 DUP ('.'),'$'
+    defeatText3 DB 10,13,15 DUP ('.'),'  | |) | _|| _|| _| / _ \| |  ',15 DUP ('.'),'$'
+    defeatText4 DB 10,13,15 DUP ('.'),'  |___/|___|_| |___/_/ \_\_|  ',15 DUP ('.'),'$'
 
     MENU_SCREEN1 DB 10 DUP(10),13,10 DUP(' '),' ___   _ _____ _   _    _  _   _     _  _   ___   ___   _    $'
     MENU_SCREEN2 DB 10,13,10 DUP(' '),'| _ ) /_\_   _/_\ | |  | || | /_\   | \| | /_\ \ / /_\ | |   $'
@@ -600,7 +622,7 @@ verifyPlayerSunkships PROC
         INC BYTE PTR sunkShips
     
     CONTINUA:
-        CMP BYTE PTR sunkShips,6
+        CMP BYTE PTR sunkShips,1
         JAE GAMEOVER
         MOV DL,sunkShips
         MOV DH,playerBoatsSunken
@@ -628,6 +650,17 @@ verifyPlayerSunkships PROC
     GAMEOVER:
         clearScreen
         CALL updateScreen
+        imprimeString victoryString1
+        imprimeString victoryString2
+        pulaLinha
+
+        imprimeString defeatText1
+        imprimeString defeatText2
+        imprimeString defeatText3
+        imprimeString defeatText4
+
+        imprimeString victoryString2
+        imprimeString victoryString1
         MOV AH,4ch
         INT 21H
     
@@ -651,7 +684,7 @@ verifyCPUSunkships PROC
         INC BYTE PTR sunkShips
     
     CONTINUA_CPU:
-        CMP BYTE PTR sunkShips,6
+        CMP BYTE PTR sunkShips,1
         JAE GAMEOVER_CPU
         MOV DL,sunkShips
         MOV DH,cpuBoatsSunken
@@ -675,6 +708,16 @@ verifyCPUSunkships PROC
         RET 
 
     GAMEOVER_CPU:
+        clearScreen
+        CALL updateScreen
+        imprimeString victoryString1
+        imprimeString victoryString2
+        imprimeString victoryText1
+        imprimeString victoryText2
+        imprimeString victoryText3
+        imprimeString victoryText4
+        imprimeString victoryString2
+        imprimeString victoryString1
         MOV AH,4ch
         INT 21h
 

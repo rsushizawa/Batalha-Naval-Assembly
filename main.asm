@@ -622,7 +622,7 @@ verifyPlayerSunkships PROC
         INC BYTE PTR sunkShips
     
     CONTINUA:
-        CMP BYTE PTR sunkShips,1
+        CMP BYTE PTR sunkShips,6
         JAE GAMEOVER
         MOV DL,sunkShips
         MOV DH,playerBoatsSunken
@@ -684,7 +684,7 @@ verifyCPUSunkships PROC
         INC BYTE PTR sunkShips
     
     CONTINUA_CPU:
-        CMP BYTE PTR sunkShips,1
+        CMP BYTE PTR sunkShips,6
         JAE GAMEOVER_CPU
         MOV DL,sunkShips
         MOV DH,cpuBoatsSunken
